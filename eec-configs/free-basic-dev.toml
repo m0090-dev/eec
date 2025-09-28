@@ -1,0 +1,6 @@
+[[envs]]
+key = "PATH"
+value = [
+	"$(DEV_TOOLS_PATH)\\FreeBASIC-1.10.1-winlibs-gcc-9.3.0",
+	"$(DEV_TOOLS_PATH)\\window9\\Bin\\Win64\\UNICODE\\",
+]

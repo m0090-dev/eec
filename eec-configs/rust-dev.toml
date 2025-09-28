@@ -1,0 +1,23 @@
+[[envs]]
+key = "CARGO_HOME"
+value = "$(DEV_TOOLS_PATH)\\rust\\cargo-home"
+
+[[envs]]
+key = "CARGO_INSTALL_ROOT"
+value = "$(DEV_TOOLS_PATH)\\rust\\cargo-home"
+
+[[envs]]
+key = "RUSTUP_HOME"
+value = "$(DEV_TOOLS_PATH)\\rust\\rustup-home"
+
+
+[[envs]]
+key = "PATH"
+value = [
+    # Devtools rust
+    "$(DEV_TOOLS_PATH)\\rust\\rustup-home\\toolchains\\beta-x86_64-pc-windows-msvc\\lib\\rustlib\\x86_64-pc-windows-msvc\\lib",
+    "$(DEV_TOOLS_PATH)\\rust\\rustup-home\\toolchains\\beta-x86_64-pc-windows-msvc\\bin",
+    "$(DEV_TOOLS_PATH)\\rust\\.cargo\\bin",
+    "$(DEV_TOOLS_PATH)\\rust\\cargo-home\\bin",
+]
+

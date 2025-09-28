@@ -1,0 +1,12 @@
+[
+  {
+    "Header": "\u69CB\u6210\u540D 1",
+    "Program": "bash",
+    "ConfigFile": null,
+    "Tag": null,
+    "WaitTimeout": 60000,
+    "ProgramArgs": [],
+    "Imports": [],
+    "HideWindow": false
+  }
+]

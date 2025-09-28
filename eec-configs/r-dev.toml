@@ -1,0 +1,7 @@
+[[envs]]
+key = "PATH"
+value = [
+      # Devtools and TestPath etc.
+      "D:\\win\\dev-tools\\r\\R-4.5.1\\bin"   
+]
+

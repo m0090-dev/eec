@@ -1,0 +1,195 @@
+[[envs]]
+key = "LIBCLANG_PATH"
+value = "$(DEV_DRIVE_LETTER)\\win\\dev-tools\\clang+llvm-20.1.2-x86_64-pc-windows-msvc.tar\\clang+llvm-20.1.2-x86_64-pc-windows-msvc\\bin"
+
+[[envs]]
+key = "DEV_DRIVE_LETTER"
+value = "D:"
+
+[[envs]]
+key = "DEV_TOOLS_PATH"
+value = "$(DEV_DRIVE_LETTER)\\win\\dev-tools"
+
+[[envs]]
+key = "DEV_PROGRAM_PATH"
+value = "$(DEV_DRIVE_LETTER)\\win\\program"
+
+[[envs]]
+key = "DEV_TOOLS_CLIBS_PATH"
+value = "$(DEV_DRIVE_LETTER)\\win\\dev-tools\\clibs"
+
+[[envs]]
+key = "XDG_CONFIG_HOME"
+value = "$(DEV_TOOLS_PATH)\\neovim\\config"
+
+[[envs]]
+key = "XDG_DATA_HOME"
+value = "$(DEV_TOOLS_PATH)\\neovim\\data"
+
+[[envs]]
+key = "XDG_CACHE_HOME"
+value = "$(DEV_TOOLS_PATH)\\cache"
+
+[[envs]]
+key = "INCLUDE"
+value = [
+  "$(DEV_DRIVE_LETTER)\\win\\program\\rb\\test-project\\test-imgui\\SDL2-devel-2.32.4-mingw\\SDL2-2.32.4\\x86_64-w64-mingw32\\include",
+  "$(DEV_TOOLS_PATH)\\vcpkg-master\\installed\\x64-windows\\include",
+  "$(DEV_DRIVE_LETTER)\\win\\dev-tools\\microsoft-build-tools\\BuildTools\\VC\\Tools\\MSVC\\14.39.33519\\include",
+  "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\ucrt"
+]
+
+[[envs]]
+key = "LIB"
+value = [
+  "$(DEV_DRIVE_LETTER)\\win\\program\\rb\\test-project\\test-imgui\\SDL2-devel-2.32.4-mingw\\SDL2-2.32.4\\x86_64-w64-mingw32\\lib",
+  "$(DEV_TOOLS_PATH)\\vcpkg-master\\installed\\x64-windows\\lib",
+  "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x64",
+  "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\um\\x64",
+  "$(DEV_TOOLS_PATH)\\microsoft-build-tools\\BuildTools\\VC\\Tools\\MSVC\\14.43.34808\\lib\\x64",
+  "$(DEV_TOOLS_CLIBS_PATH)\\sdl2\\latest\\SDL2-devel-2.32.4-VC\\SDL2-2.32.4\\lib\\x64",
+  "$(DEV_TOOLS_CLIBS_PATH)\\sdl2-mixer\\SDL2_mixer-devel-2.8.1-VC\\SDL2_mixer-2.8.1\\lib\\x64",
+  "$(DEV_TOOLS_CLIBS_PATH)\\sdl2-image\\SDL2_image-devel-2.8.8-VC\\SDL2_image-2.8.8\\lib\\x64"
+]
+
+[[envs]]
+key = "LIBPATH"
+value = [
+  "$(DEV_TOOLS_PATH)\\vcpkg-master\\installed\\x64-windows\\lib",
+  "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x64",
+  "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\um\\x64",
+  "$(DEV_DRIVE_LETTER)\\win\\dev-tools\\microsoft-build-tools\\BuildTools\\VC\\Tools\\MSVC\\14.39.33519\\lib\\x64"
+]
+
+[[envs]]
+key = "JAVA_HOME"
+value = "$(DEV_TOOLS_PATH)\\openjdk-23.0.2_windows-x64_bin\\jdk-23.0.2"
+
+[[envs]]
+key = "CARGO_HOME"
+value = "$(DEV_TOOLS_PATH)\\rust\\cargo-home"
+
+[[envs]]
+key = "CARGO_INSTALL_ROOT"
+value = "$(DEV_TOOLS_PATH)\\rust\\cargo-home"
+
+[[envs]]
+key = "PYENV_ROOT"
+value = "$(DEV_TOOLS_PATH)\\python\\pyenv"
+
+[[envs]]
+key = "PYENV"
+value = "$(DEV_TOOLS_PATH)\\python\\pyenv\\pyenv-win"
+
+[[envs]]
+key = "PYENV_HOME"
+value = "$(DEV_TOOLS_PATH)\\python\\pyenv\\pyenv-win"
+
+[[envs]]
+key = "RUSTUP_HOME"
+value = "$(DEV_TOOLS_PATH)\\rust\\rustup-home"
+
+[[envs]]
+key = "GRADLE_USER_HOME"
+value = "$(DEV_TOOLS_PATH)\\gradle-8.12.1-all\\gradle-user-home"
+
+[[envs]]
+key = "BUNDLE_USER_HOME"
+value = "$(DEV_TOOLS_PATH)\\Ruby33-x64\\bundle-user-home"
+
+[[envs]]
+key = "GOPATH"
+value = "$(DEV_TOOLS_PATH)\\go\\go-path"
+
+
+[[envs]]
+key = "PATH"
+value = [
+    # Default paths
+    "C:\\Windows\\System32\\",
+    "C:\\Windows\\SysWOW64\\",
+    "C:\\WINDOWS",
+    "C:\\WINDOWS\\System32\\Wbem",
+    "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0",
+    "C:\\WINDOWS\\System32\\OpenSSH",
+    "C:\\Program Files\\OpenSSL-Win64\\bin",
+    "C:\\Program Files\\MySQL\\MySQL Server 8.3\\bin",
+    "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x64",
+    "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\um\\x64",
+    # Devtools and TestPath etc.
+    "$(DEV_TOOLS_PATH)\\neovim\\app\\bin",
+    "$(USERPROFILE)\\use-bin\\git\\CLI",
+    "$(DEV_TOOLS_PATH)\\rust\\rustup-home\\toolchains\\beta-x86_64-pc-windows-msvc\\lib\\rustlib\\x86_64-pc-windows-msvc\\lib",
+    "$(DEV_TOOLS_PATH)\\rust\\rustup-home\\toolchains\\beta-x86_64-pc-windows-msvc\\bin",
+    "$(DEV_TOOLS_PATH)\\nodejs\\bin\\",
+    "$(DEV_TOOLS_PATH)\\git\\CLI",
+    "$(DEV_TOOLS_PATH)\\git\\Git\\bin",
+    "$(DEV_TOOLS_PATH)\\rust\\.cargo\\bin",
+    "$(DEV_TOOLS_PATH)\\rust\\cargo-home\\bin",
+    "$(USERPROFILE)\\AppData\\Local\\Microsoft\\WindowsApps",
+    "$(DEV_PROGRAM_PATH)\\rs\\main-project\\allmk-rs\\target\\release",
+    "$(DEV_PROGRAM_PATH)\\rs\\main-project\\windows-touch-rs\\target\\release",
+    "$(DEV_PROGRAM_PATH)\\rs\\main-project\\output-envlist-rs\\target\\release",
+    "$(DEV_PROGRAM_PATH)\\bat\\main-project\\git-keep-touch",
+    "$(DEV_PROGRAM_PATH)\\bat\\main-project\\wrapper-nvim",
+    "$(USERPROFILE)\\AppData\\Roaming\\npm",
+    "$(PYENV_ROOT)\\pyenv-win\\bin",
+    "$(DEV_TOOLS_PATH)\\cmake\\bin",
+    "$(DEV_TOOLS_PATH)\\mpv",
+    "$(DEV_TOOLS_PATH)\\nasm",
+    "$(DEV_TOOLS_PATH)\\pkg-config\\bin",
+    "$(DEV_TOOLS_CLIBS_PATH)\\sfml\\bin",
+    "$(DEV_TOOLS_CLIBS_PATH)\\sdl2\\latest\\SDL2-devel-2.32.4-VC\\SDL2-2.32.4\\lib\\x64",
+    "$(DEV_TOOLS_CLIBS_PATH)\\sdl2-mixer\\SDL2_mixer-devel-2.8.1-VC\\SDL2_mixer-2.8.1\\lib\\x64",
+    "$(DEV_TOOLS_CLIBS_PATH)\\sdl2-image\\SDL2_image-devel-2.8.8-VC\\SDL2_image-2.8.8\\lib\\x64",
+    "$(DEV_TOOLS_PATH)\\zip\\bin",
+    "$(DEV_TOOLS_PATH)\\zip\\bzip2\\bin",
+    "$(DEV_TOOLS_PATH)\\dotnet",
+    "$(DEV_TOOLS_CLIBS_PATH)\\dxlib-dotnet",   
+    "$(USERPROFILE)\\use-script\\shared-code\\target\\release",
+    "$(USERPROFILE)\\use-script\\",
+    "$(PYENV_ROOT)\\pyenv-win\\versions\\3.12.0",
+    "$(PYENV_ROOT)\\pyenv-win\\versions\\3.12.0\\Scripts",
+    #"$(USERPROFILE)\\.pyenv\\pyenv-win\\versions\\3.9.0\\Scripts",
+    #"$(USERPROFILE)\\.pyenv\\pyenv-win\\versions\\3.9.0",
+    "$(USERPROFILE)\\use-bin\\7zip\\7-Zip",
+    # "$(DEV_TOOLS_PATH)\\i686-12.1.0-release-posix-dwarf-rt_v10-rev3\\mingw32\\bin\\",
+    "$(DEV_TOOLS_PATH)\\x86_64-12.2.0-release-posix-seh-ucrt-rt_v10-rev2\\mingw64\\bin",
+    #"$(DEV_TOOLS_PATH)\\x86_64-12.2.0-release-posix-seh-msvcrt-rt_v10-rev2\\mingw64\\bin",
+
+
+    "$(DEV_TOOLS_PATH)\\microsoft-build-tools\\BuildTools\\VC\\Tools\\MSVC\\14.43.34808\\bin\\Hostx64\\x64",
+    "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.26100.0\\x64",
+    #"$(DEV_TOOLS_PATH)\\pspsdk\\bin\\",
+    #"$(DEV_TOOLS_PATH)\\pspsdk\\psp\\bin\\",
+    "$(DEV_TOOLS_PATH)\\uru",
+    "$(DEV_TOOLS_PATH)\\gnu-make\\bin",   
+    "$(DEV_PROGRAM_PATH)\\rb\\main-project\\mruby\\build\\host\\mrbc\\bin",
+    "$(DEV_PROGRAM_PATH)\\rb\\main-project\\allmk-rb",
+    "$(DEV_TOOLS_PATH)\\go\\bin\\",
+    "$(DEV_TOOLS_PATH)\\go\\go-path\\bin",
+    "$(DEV_TOOLS_PATH)\\fzf-0.23.1-windows_amd64\\",
+    "$(DEV_TOOLS_PATH)\\nvm\\",
+    "$(DEV_TOOLS_PATH)\\vcpkg-master\\",
+    "$(DEV_TOOLS_PATH)\\vcpkg-master\\installed\\x64-windows\\bin",
+    "$(DEV_TOOLS_PATH)\\openjdk-23.0.2_windows-x64_bin\\jdk-23.0.2\\bin",
+    "$(DEV_TOOLS_PATH)\\jruby-9.4.11.0\\jruby-9.4.11.0\\bin",
+    "$(DEV_TOOLS_PATH)\\apache-maven-3.9.9\\bin\\",
+    "$(DEV_TOOLS_PATH)\\kotlin-compiler-2.1.10\\kotlinc\\bin\\",
+    "$(DEV_TOOLS_PATH)\\gradle-8.12.1-all\\bin\\",
+    "$(DEV_TOOLS_PATH)\\ffmpeg-2024-11-03-git-df00705e00-full_build\\bin\\",
+    "$(DEV_TOOLS_PATH)\\swift\\Toolchains\\6.0.3+Asserts\\usr\\bin",
+    "$(DEV_TOOLS_PATH)\\swift\\Tools\\6.0.3",
+    "$(DEV_TOOLS_PATH)\\swift\\Runtimes\\6.0.3\\usr\\bin",
+    "$(DEV_TOOLS_PATH)\\swift\\Redistributables\\6.0.3",
+    "$(DEV_TOOLS_PATH)\\gnucobol-3.1.2-windows-msvc-all\\bin_x64",
+    "$(DEV_TOOLS_PATH)\\gnucobol-3.1.2-windows-msvc-all",
+    "$(DEV_TOOLS_PATH)\\nodejs\\",
+    "$(DEV_TOOLS_PATH)\\texlive\\2025\\bin\\windows",
+    "$(DEV_TOOLS_PATH)\\go-task\\task_windows_amd64",
+    "$(DEV_TOOLS_PATH)\\bsdiff\\bsdiff-v4.3-win-x64",
+    "$(DEV_TOOLS_PATH)\\jq\\",
+    "$(DEV_TOOLS_PATH)\\tinygo0.37.0.windows-amd64\\tinygo\\bin",
+    "$(DEV_TOOLS_PATH)\\binaryen-version_122-x86_64-windows.tar\\binaryen-version_122-x86_64-windows\\binaryen-version_122\\bin",
+]
+

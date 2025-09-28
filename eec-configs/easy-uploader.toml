@@ -1,0 +1,124 @@
+[[envs]]
+key = "LIBCLANG_PATH"
+value = "$(DEV_DRIVE_LETTER)\\win\\dev-tools\\clang+llvm-20.1.2-x86_64-pc-windows-msvc.tar\\clang+llvm-20.1.2-x86_64-pc-windows-msvc\\bin"
+
+[[envs]]
+key = "DEV_DRIVE_LETTER"
+value = "D:"
+
+[[envs]]
+key = "DEV_TOOLS_PATH"
+value = "$(DEV_DRIVE_LETTER)\\win\\dev-tools"
+
+[[envs]]
+key = "DEV_PROGRAM_PATH"
+value = "$(DEV_DRIVE_LETTER)\\win\\program"
+
+[[envs]]
+key = "DEV_TOOLS_CLIBS_PATH"
+value = "$(DEV_DRIVE_LETTER)\\win\\dev-tools\\clibs"
+
+[[envs]]
+key = "XDG_CONFIG_HOME"
+value = "$(DEV_TOOLS_PATH)\\neovim\\config"
+
+[[envs]]
+key = "XDG_DATA_HOME"
+value = "$(DEV_TOOLS_PATH)\\neovim\\data"
+
+[[envs]]
+key = "XDG_CACHE_HOME"
+value = "$(DEV_TOOLS_PATH)\\cache"
+
+[[envs]]
+key = "INCLUDE"
+value = [
+  "$(DEV_DRIVE_LETTER)\\win\\program\\rb\\test-project\\test-imgui\\SDL2-devel-2.32.4-mingw\\SDL2-2.32.4\\x86_64-w64-mingw32\\include",
+  "$(DEV_TOOLS_PATH)\\vcpkg-master\\installed\\x64-windows\\include",
+  "$(DEV_DRIVE_LETTER)\\win\\dev-tools\\microsoft-build-tools\\BuildTools\\VC\\Tools\\MSVC\\14.39.33519\\include",
+  "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\ucrt"
+]
+
+[[envs]]
+key = "LIB"
+value = [
+  "$(DEV_DRIVE_LETTER)\\win\\program\\rb\\test-project\\test-imgui\\SDL2-devel-2.32.4-mingw\\SDL2-2.32.4\\x86_64-w64-mingw32\\lib",
+  "$(DEV_TOOLS_PATH)\\vcpkg-master\\installed\\x64-windows\\lib",
+  "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x64",
+  "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\um\\x64",
+  "$(DEV_TOOLS_PATH)\\microsoft-build-tools\\BuildTools\\VC\\Tools\\MSVC\\14.43.34808\\lib\\x64",
+  "$(DEV_TOOLS_CLIBS_PATH)\\sdl2\\latest\\SDL2-devel-2.32.4-VC\\SDL2-2.32.4\\lib\\x64",
+  "$(DEV_TOOLS_CLIBS_PATH)\\sdl2-mixer\\SDL2_mixer-devel-2.8.1-VC\\SDL2_mixer-2.8.1\\lib\\x64",
+  "$(DEV_TOOLS_CLIBS_PATH)\\sdl2-image\\SDL2_image-devel-2.8.8-VC\\SDL2_image-2.8.8\\lib\\x64"
+]
+
+[[envs]]
+key = "LIBPATH"
+value = [
+  "$(DEV_TOOLS_PATH)\\vcpkg-master\\installed\\x64-windows\\lib",
+  "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x64",
+  "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\um\\x64",
+  "$(DEV_DRIVE_LETTER)\\win\\dev-tools\\microsoft-build-tools\\BuildTools\\VC\\Tools\\MSVC\\14.39.33519\\lib\\x64"
+]
+
+[[envs]]
+key = "JAVA_HOME"
+value = "$(DEV_TOOLS_PATH)\\openjdk-23.0.2_windows-x64_bin\\jdk-23.0.2"
+
+[[envs]]
+key = "CARGO_HOME"
+value = "$(DEV_TOOLS_PATH)\\rust\\cargo-home"
+
+[[envs]]
+key = "CARGO_INSTALL_ROOT"
+value = "$(DEV_TOOLS_PATH)\\rust\\cargo-home"
+
+[[envs]]
+key = "PYENV_ROOT"
+value = "$(DEV_TOOLS_PATH)\\python\\pyenv"
+
+[[envs]]
+key = "PYENV"
+value = "$(DEV_TOOLS_PATH)\\python\\pyenv\\pyenv-win"
+
+[[envs]]
+key = "PYENV_HOME"
+value = "$(DEV_TOOLS_PATH)\\python\\pyenv\\pyenv-win"
+
+[[envs]]
+key = "RUSTUP_HOME"
+value = "$(DEV_TOOLS_PATH)\\rust\\rustup-home"
+
+[[envs]]
+key = "GRADLE_USER_HOME"
+value = "$(DEV_TOOLS_PATH)\\gradle-8.12.1-all\\gradle-user-home"
+
+[[envs]]
+key = "BUNDLE_USER_HOME"
+value = "$(DEV_TOOLS_PATH)\\Ruby33-x64\\bundle-user-home"
+
+[[envs]]
+key = "GOPATH"
+value = "$(DEV_TOOLS_PATH)\\go\\go-path"
+
+
+
+
+[[envs]]
+key = "PATH"
+value = [
+    # Default paths
+    "C:\\Windows\\System32\\",
+    "C:\\Windows\\SysWOW64\\",
+    "C:\\WINDOWS",
+    "C:\\WINDOWS\\System32\\Wbem",
+    "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0",
+    "C:\\WINDOWS\\System32\\OpenSSH",
+    "C:\\Program Files\\OpenSSL-Win64\\bin",
+    "C:\\Program Files\\MySQL\\MySQL Server 8.3\\bin",
+    "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x64",
+    "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\um\\x64",
+    "$(DEV_PROGRAM_PATH)\\go\\main-project\\google-drive-easy-uploader-gui\\", 
+    "$(DEV_PROGRAM_PATH)\\go\\main-project\\google-drive-easy-uploader-gui\\build\\", 
+]
+

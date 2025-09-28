@@ -1,0 +1,14 @@
+envs:
+  - key: PATH
+    value:
+      - "TESTDIR/TESTO/1919/"
+      - "D:\\win\\dev-tools\\mpv\\"
+      - "D:\\win\\program\\py\\main-project\\checkitems\\dist"
+  - key: TEST_ENVS
+    value:
+      - "12345あいえうお"
+      - "6789かきくけこ"
+
+program:
+  path: ""
+  args: []

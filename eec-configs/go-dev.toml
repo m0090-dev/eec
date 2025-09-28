@@ -1,0 +1,35 @@
+[[envs]]
+key = "JAVA_HOME"
+value = "$(DEV_TOOLS_PATH)\\android\\android-studio\\jbr"
+
+[[envs]]
+key = "ANDROID_NDK_HOME"
+value = "$(DEV_TOOLS_PATH)\\android\\sdk\\ndk\\27.0.12077973"
+
+[[envs]]
+key = "PYENV_ROOT"
+value = "$(DEV_TOOLS_PATH)\\python\\pyenv"
+
+[[envs]]
+key = "PYENV"
+value = "$(DEV_TOOLS_PATH)\\python\\pyenv\\pyenv-win"
+
+[[envs]]
+key = "PYENV_HOME"
+value = "$(DEV_TOOLS_PATH)\\python\\pyenv\\pyenv-win"
+
+[[envs]]
+key = "GOPATH"
+value = "$(DEV_TOOLS_PATH)\\go\\go-path"
+
+
+[[envs]]
+key = "PATH"
+value = [
+    #"$(DEV_TOOLS_PATH)\\pspsdk\\bin\\",
+    #"$(DEV_TOOLS_PATH)\\pspsdk\\psp\\bin\\",
+   "$(DEV_TOOLS_PATH)\\go\\bin\\",
+    "$(DEV_TOOLS_PATH)\\go\\go-path\\bin",
+    "$(DEV_TOOLS_PATH)\\tinygo0.37.0.windows-amd64\\tinygo\\bin",
+   ]
+

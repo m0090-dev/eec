@@ -1,0 +1,6 @@
+[[envs]]
+key = "PATH"
+value = [
+	#"$(USERPROFILE)\\.dotnet\\tools"
+	"$(DEV_TOOLS_PATH)\\dotnet"
+]

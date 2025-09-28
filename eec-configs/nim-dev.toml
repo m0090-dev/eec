@@ -1,0 +1,9 @@
+[[envs]]
+key = "NIMBLE_DIR"
+value = "$(DEV_TOOLS_PATH)\\nim\\nim-2.2.4_x64\\nim-2.2.4\\nimble-dir"
+[[envs]]
+key = "PATH"
+value = [
+	"$(DEV_TOOLS_PATH)\\nim\\mingw64\\bin",
+	"$(DEV_TOOLS_PATH)\\nim\\nim-2.2.4_x64\\nim-2.2.4\\bin",
+]
