@@ -1,54 +1,55 @@
 package core
 
 import (
-	"runtime"
+	//"os/exec"
 	"bytes"
 	"context"
 	"encoding/gob"
 	"errors"
 	"fmt"
+	gos "os"
+	"runtime"
+	//"syscall"
 	"github.com/google/uuid"
 	"github.com/m0090-dev/eec-go/core/ext"
 	"github.com/m0090-dev/eec-go/core/utils/domain"
 	"github.com/m0090-dev/eec-go/core/utils/general"
+
 	//"github.com/rs/zerolog/log"
 	//"os"
+	//"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 )
 
-
-
 // Engine is the core library entrypoint. It contains pluggable implementations
 // for executing commands and file operations so CLI can inject mocks for tests.
 type Engine struct {
-	OS       ext.OS
-	Logger   ext.Logger
+	OS     ext.OS
+	Logger ext.Logger
 }
 
-
-func (e *Engine) FS() ext.FS { return e.OS.FS }
-func (e *Engine) Env() ext.Env { return e.OS.Env }
-func (e *Engine) Executor() ext.Executor{return e.OS.Executor}
-func (e *Engine) CommandLine() ext.CommandLine{return e.OS.CommandLine}
-func (e *Engine) Console() ext.Console{return e.OS.Console}
-
+func (e *Engine) FS() ext.FS                   { return e.OS.FS }
+func (e *Engine) Env() ext.Env                 { return e.OS.Env }
+func (e *Engine) Executor() ext.Executor       { return e.OS.Executor }
+func (e *Engine) CommandLine() ext.CommandLine { return e.OS.CommandLine }
+func (e *Engine) Console() ext.Console         { return e.OS.Console }
 
 // NewEngine returns an Engine with sensible defaults (os-backed).
 
 func NewEngine(os *ext.OS, logger ext.Logger) *Engine {
-    if os == nil {
-        temp := ext.NewOS()
-        os = &temp
-    }
-    if logger == nil {
-	logger = ext.NewDefaultLogger() 
-    }
-    return &Engine{
-        OS:     *os,
-        Logger: logger,
-    }
+	if os == nil {
+		temp := ext.NewOS()
+		os = &temp
+	}
+	if logger == nil {
+		logger = ext.NewDefaultLogger()
+	}
+	return &Engine{
+		OS:     *os,
+		Logger: logger,
+	}
 }
 
 // RunOptions contains all inputs that were previously taken from flags / tag file.
@@ -59,31 +60,101 @@ type RunOptions struct {
 	Tag         string
 	Imports     []string
 	// Timeout for waiting program; zero means wait indefinitely
-	WaitTimeout time.Duration
-	HideWindow  bool
+	WaitTimeout       time.Duration
+	HideWindow        bool
+	DeleterPath       string
+	DeleterHideWindow bool
 }
-
 
 // Run executes the previous run() logic but returns errors instead of os.Exit.
 // It is CLI-agnostic: the CLI just constructs RunOptions and provides Engine.
 func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
+
+	var err error
 	// -----------------------*/
 	// 開始時環境変数表示*/
 	// -----------------------*/
 	{
-	  envs := e.Env().Environ()
-	  envStr := strings.Join(envs, ", ")
-	  e.Logger.Debug().Str("Started envs", envStr).Msg("")
-        }
+		envs := e.Env().Environ()
+		envStr := strings.Join(envs, ", ")
+		e.Logger.Debug().Str("Started envs", envStr).Msg("")
+	}
 
-	e.Logger.Debug().Str("configFile", opts.ConfigFile).Str("program", opts.Program).
-		Strs("programArgs", opts.ProgramArgs).Str("tag", opts.Tag).Strs("imports", opts.Imports).Msg("Run called")
+	e.Logger.Debug().Str("config file", opts.ConfigFile).Str("program", opts.Program).
+		Strs("Program args", opts.ProgramArgs).Str("tag", opts.Tag).Strs("imports", opts.Imports).Int("Wait timeout", int(opts.WaitTimeout)).Bool("Hide window", opts.HideWindow).Str("Deleter path", opts.DeleterPath).Bool("Deleter hide window", opts.DeleterHideWindow).Msg("Run called")
+
+	// ----------------------*/
+	// deleter起動
+	// ----------------------*/
+	deleterPath := opts.DeleterPath
+	deleterHideWindow := opts.DeleterHideWindow
+
+	if deleterPath == "" || !e.FS().FileExists(deleterPath) {
+		deleterPath = filepath.Join(ext.DEFAULT_DELETER_EXECUTE_NAME)
+	}
+
+	// Start process
+	running, err := domain.IsProcessRunning(e.OS, e.Logger, ext.DEFAULT_DELETER_EXECUTE_NAME)
+	if err != nil {
+		e.Logger.Error().Err(err).Msg("failed to check process")
+		return fmt.Errorf("failed to check process: %w", err)
+	}
+
+	if running {
+		e.Logger.Debug().Msgf("[%s] は既に実行中です", deleterPath)
+	} else {
+		e.Logger.Debug().Msgf("[%s] を起動します...", deleterPath)
+		var pid int
+		//var proc *gos.Process
+		//var cmd *exec.Cmd
+		var err error
+
+		if runtime.GOOS == "windows" {
+			// Windows
+			var out, errOut *gos.File
+			if !deleterHideWindow {
+				// 表示する場合のみ Console を繋ぐ
+				out, errOut = e.Console().Stdout(), e.Console().Stderr()
+			}
+
+			pid, _, _, err = e.Executor().StartProcessWithCmd(
+				deleterPath,
+				[]string{}, // 引数なし
+				e.Env().Environ(),
+				nil,               // stdin は使わない
+				out,               // stdout
+				errOut,            // stderr
+				deleterHideWindow, // HideWindow フラグ
+			)
+		} else {
+			// Linux / macOS
+			var out, errOut *gos.File
+			if !deleterHideWindow {
+				// 通常モードは Console に接続
+				out, errOut = e.Console().Stdout(), e.Console().Stderr()
+			}
+			pid, _, _, err = e.Executor().StartProcessWithCmd(
+				deleterPath,
+				[]string{}, // 引数なし
+				e.Env().Environ(),
+				nil,               // stdin
+				out,               // stdout
+				errOut,            // stderr
+				deleterHideWindow, // nohup 相当かどうか
+			)
+		}
+
+		if err != nil {
+			e.Logger.Error().Err(err).Msg("failed to start process")
+			return fmt.Errorf("failed to start process: %w", err)
+		}
+		e.Logger.Info().Msgf("deleter started (pid=%d)", pid)
+	}
 
 	// Read tag data if provided
 	var tagData ext.TagData
-	var err error
 	if opts.Tag != "" {
-		tagData, err = ext.ReadTagData(e.OS,e.Logger,opts.Tag)
+		tagData, err = ext.ReadTagData(e.OS, e.Logger, opts.Tag)
 		if err != nil {
 			e.Logger.Error().Err(err).Str("tag", opts.Tag).Msg("failed to read tag")
 			return fmt.Errorf("failed to read tag %s: %w", opts.Tag, err)
@@ -122,7 +193,7 @@ func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
 	// Load main config if exists
 	var config ext.Config
 	if configFile != "" && e.FS().FileExists(configFile) {
-		if config, err = ext.ReadConfig(e.OS,e.Logger,configFile); err != nil {
+		if config, err = ext.ReadConfig(e.OS, e.Logger, configFile); err != nil {
 			e.Logger.Error().Err(err).Str("configFile", configFile).Msg("failed to read config")
 			return fmt.Errorf("failed to read config %s: %w", configFile, err)
 		}
@@ -172,7 +243,7 @@ func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
 
 	// imports from opts
 	for _, imp := range opts.Imports {
-		cfg, rerr := domain.ReadOrFallback(e.OS,e.Logger,imp)
+		cfg, rerr := domain.ReadOrFallback(e.OS, e.Logger, imp)
 		if rerr == nil {
 			allConfigs = append(allConfigs, cfg)
 		} else {
@@ -183,7 +254,7 @@ func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
 
 	// tag imports
 	for _, imp := range tagData.ImportConfigFiles {
-		cfg, rerr := domain.ReadOrFallback(e.OS,e.Logger,imp)
+		cfg, rerr := domain.ReadOrFallback(e.OS, e.Logger, imp)
 		if rerr == nil {
 			allConfigs = append(allConfigs, cfg)
 		} else {
@@ -197,7 +268,7 @@ func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
 	// start with current environ
 	finalEnv := e.Env().Environ()
 	for _, cfg := range allConfigs {
-		finalEnv = cfg.BuildEnvs(e.OS,e.Logger,finalEnv)
+		finalEnv = cfg.BuildEnvs(e.OS, e.Logger, finalEnv)
 	}
 
 	// Debug prints similar to original
@@ -221,7 +292,7 @@ func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
 	*/
 
 	// Start process
-	childPid, proc, err := e.Executor().StartProcess(program, pArgs, finalEnv, e.Console().Stdin(), e.Console().Stdout(), e.Console().Stderr(),opts.HideWindow)
+	childPid, proc, err := e.Executor().StartProcess(program, pArgs, finalEnv, e.Console().Stdin(), e.Console().Stdout(), e.Console().Stderr(), opts.HideWindow)
 	if err != nil {
 		e.Logger.Error().Err(err).Msg("failed to start process")
 		return fmt.Errorf("failed to start process: %w", err)
@@ -266,10 +337,10 @@ func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
 	// 終了時環境変数表示*/
 	// -----------------------*/
 	{
-	  envs := e.Env().Environ()
-	  envStr := strings.Join(envs, ", ")
-	  e.Logger.Debug().Str("Finished envs", envStr).Msg("")
-        }
+		envs := e.Env().Environ()
+		envStr := strings.Join(envs, ", ")
+		e.Logger.Debug().Str("Finished envs", envStr).Msg("")
+	}
 
 	e.Logger.Info().Msg("process finished normally")
 	return nil
@@ -279,21 +350,22 @@ func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
 
 // Gen performs generator-related core work (placeholder).
 func (e *Engine) GenScript() error {
-	domain.GenUtilsScript(e.OS,e.Logger)
-	domain.GenWrapScript(e.OS,e.Logger)
+	domain.GenUtilsScript(e.OS, e.Logger)
+	domain.GenWrapScript(e.OS, e.Logger)
 	return nil
 }
 
 // Info returns structured information about the environment or config.
 func (e *Engine) Info() error {
 	infos := []string{}
-	infos = append(infos, fmt.Sprintf("version=%s",ext.VERSION))
+	infos = append(infos, fmt.Sprintf("version=%s", ext.VERSION))
 	infos = append(infos, fmt.Sprintf("pid=%d", e.Executor().Getpid()))
 	infos = append(infos, fmt.Sprintf("goOS=%s", runtime.GOOS))
 
 	e.Logger.Info().Strs("infos", infos).Msg("eec Info messages")
 	return nil
 }
+
 // Restart attempts to restart a child process based on manifest/temp file.
 // This is a suggestion-level implementation: locate manifest, read temp data, kill old, start new.
 func (e *Engine) Restart(manifestPath string) {
@@ -352,7 +424,7 @@ func (e *Engine) TagAdd(name string, tag ext.TagData) error {
 		Msg("")
 	//
 
-	if err := tag.Write(e.OS,e.Logger,tagName); err != nil {
+	if err := tag.Write(e.OS, e.Logger, tagName); err != nil {
 		e.Logger.Error().Err(err).Msg("タグファイルの書き込みに失敗しました")
 		fmt.Errorf("Failed to tag file")
 	}
@@ -361,7 +433,7 @@ func (e *Engine) TagAdd(name string, tag ext.TagData) error {
 }
 func (e *Engine) TagRead(name string) error {
 	tagName := name
-	data, err := ext.ReadTagData(e.OS,e.Logger,tagName)
+	data, err := ext.ReadTagData(e.OS, e.Logger, tagName)
 	if err != nil {
 		e.Logger.Error().Err(err).Msg("タグファイルの読み込みに失敗しました")
 		fmt.Errorf("Failed to tag read")
@@ -412,4 +484,3 @@ func (e *Engine) TagRemove(name string) error {
 	fmt.Printf("%s\n", strings.Join(fileLists, "\n"))
 	return nil
 }
-

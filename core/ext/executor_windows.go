@@ -47,6 +47,51 @@ func (d DefaultExecutor) StartProcess(path string, args []string, env []string, 
 	return cmd.Process.Pid, cmd.Process, nil
 }
 
+// Executor runs commands. Default uses os/exec.
+func (d DefaultExecutor) StartProcessWithCmd(
+    path string,
+    args []string,
+    env []string,
+    stdin, stdout, stderr *os.File,
+    hideWindow bool,
+) (int, *os.Process, *exec.Cmd, error) {
+    var cmd *exec.Cmd
+
+    switch runtime.GOOS {
+    case "windows":
+        // Windows の場合、cmd.exe が存在するか確認
+        if _, err := exec.LookPath("cmd.exe"); err == nil {
+            cmd = exec.Command("cmd.exe", "/C", path+" "+strings.Join(args, " "))
+            //cmd = exec.Command(path,args...)
+   	}
+        if hideWindow {
+            cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+        }else{
+            cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: false,
+	    CreationFlags:  0x00000010}
+	}
+    case "linux", "darwin":
+        // Unix系の場合、sh が存在するか確認
+        if _, err := exec.LookPath("sh"); err == nil {
+            cmd = exec.Command("sh", "-c", path+" "+strings.Join(args, " "))
+        }
+    }
+
+    // どちらも存在しない場合はそのまま実行
+    if cmd == nil {
+        cmd = exec.Command(path, args...)
+    }
+
+    cmd.Env = env
+    cmd.Stdin = stdin
+    cmd.Stdout = stdout
+    cmd.Stderr = stderr
+
+    if err := cmd.Start(); err != nil {
+        return 0, nil, cmd, err
+    }
+    return cmd.Process.Pid, cmd.Process, cmd, nil
+}
 
 
 

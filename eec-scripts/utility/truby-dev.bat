@@ -19,4 +19,4 @@ shift
 goto loop
 
 :run
-eec run --tag ruby-dev --program %PROGRAM% 
+eec run --deleter-hide-window --tag ruby-dev --program %PROGRAM% 

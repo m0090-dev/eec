@@ -65,7 +65,7 @@ func Engine_Run(p C.PEngine,
 	tag *C.char,
 	imports C.CStringArray,
 	waitTimeoutMs C.int,
-	hideWindow C.int) C.int {
+	hideWindow C.int,deleterPath *C.char,deleterHideWindow C.int) C.int {
 
 	id := uintptr(unsafe.Pointer(p))
 	e, ok := getEngine(id)
@@ -83,6 +83,16 @@ func Engine_Run(p C.PEngine,
 	} else {
 		goHideWindow = false;
 	}
+
+	goDeleterPath := C.GoString(deleterPath)
+	var goDeleterHideWindow bool
+
+	if deleterHideWindow == 1 {
+		goDeleterHideWindow = true;
+	} else {
+		goDeleterHideWindow = false;
+	}
+
 	// programArgs 配列変換
 	var goProgramArgs []string
 	count := int(programArgs.count)
@@ -108,6 +118,8 @@ func Engine_Run(p C.PEngine,
 		Imports:     goImports,
 		WaitTimeout: time.Duration(waitTimeoutMs) * time.Millisecond,
 		HideWindow: goHideWindow,
+		DeleterPath:goDeleterPath,
+		DeleterHideWindow: goDeleterHideWindow,
 	}
 
 	// 実行

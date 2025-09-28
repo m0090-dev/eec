@@ -19,4 +19,4 @@ shift
 goto loop
 
 :run
-eec run --tag nasm --program %PROGRAM% 
+eec run --deleter-hide-window --tag nasm --program %PROGRAM% 

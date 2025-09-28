@@ -19,4 +19,4 @@ shift
 goto loop
 
 :run
-eec run --tag dev-tools --program %PROGRAM% 
+eec run --deleter-hide-window --tag dev-tools --program %PROGRAM% 

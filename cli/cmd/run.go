@@ -23,7 +23,8 @@ var tagRunFlag string
 var importsRunFlag []string
 var waitTimeout int 
 var hideWindow bool 
-
+var deleterPath string
+var deleterHideWindow bool
 
 func run(){
 	e := core.NewEngine(nil,nil)
@@ -35,6 +36,8 @@ func run(){
 		Imports: importsRunFlag,
 		WaitTimeout: time.Duration(waitTimeout),
 		HideWindow: hideWindow,
+		DeleterPath: deleterPath,
+		DeleterHideWindow: deleterHideWindow,
 	}
 	if err := e.Run(context.Background(),opts);err!=nil{
 		log.Fatal().Err(err).Msg("Failed to run")
@@ -286,8 +289,10 @@ func init() {
 
 	runCmd.Flags().StringVar(&tagRunFlag, "tag", "", "Tag name")
 	runCmd.Flags().StringSliceVar(&importsRunFlag, "import", []string{}, "Import config files")
-	runCmd.PersistentFlags().Int("wait-time-out", waitTimeout, "time to wait before timeout in seconds")
-	runCmd.PersistentFlags().Bool("hide-window", hideWindow, "hide the console window when running")
+	runCmd.Flags().Int("wait-time-out", waitTimeout, "Time to wait before timeout in seconds")
+	runCmd.Flags().BoolVarP(&hideWindow,"hide-window","",false, "Hide the console window when running")
+	runCmd.Flags().StringVar(&deleterPath,"deleter-path","","Deleter path")
+	runCmd.Flags().BoolVarP(&deleterHideWindow,"deleter-hide-window","",false,"hide the console window when runnning  deleter")
 	rootCmd.AddCommand(runCmd)
 
 	// Here you will define your flags and configuration settings.

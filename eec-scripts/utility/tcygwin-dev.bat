@@ -1,5 +1,4 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 
 REM Use the first argument as --program
@@ -19,4 +18,4 @@ shift
 goto loop
 
 :run
-eec run --tag cygwin-dev --program %PROGRAM% 
+eec run --tag cygwin-dev

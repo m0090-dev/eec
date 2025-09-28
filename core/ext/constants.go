@@ -10,4 +10,7 @@ const (
 	DEFAULT_UTILS_SCRIPT_DIR = "utility"
 	DEFAULT_SCRIPT_DIR = "eec-scripts"
 	DEFAULT_CONFIG_DIR = "eec-configs"
+	DEFAULT_DELETER_DIR = "deleter"
+	DEFAULT_EXECUTE_NAME = "eec"
+	DEFAULT_DELETER_EXECUTE_NAME = "eec-deleter"
 )
