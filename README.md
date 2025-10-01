@@ -12,7 +12,7 @@ With `eec`, you can:
 ---
 
 ## Features
-- Configuration-file-based environment definitions (TOML)
+- Configuration-file-based environment definitions (TOML/YAML/JSON, future support for .env)
 - Tags for grouping and easy execution
 - Script generation for shortcut commands
 - Safe execution without modifying the global system
@@ -26,11 +26,11 @@ With `eec`, you can:
 Run a program with a given environment.
 
 Example:
-eec run --config-file test.toml --program cmd --program-args=echo,"hello world"
+eec run --config-file test.toml --program powershell --program-args="-NoExit","-Command","Write-Output 'hello world'"
 
 Effect:
 - Loads environment from `test.toml`
-- Launches `cmd` and runs `echo hello world`
+- Launches `powershell` and runs `echo hello world`
 - The environment is temporary and does not affect the system globally
 
 ---
@@ -112,10 +112,10 @@ Effect:
 Restart a running environment.
 
 Example:
-eec restart --tag dev
+eec restart
 
 Effect:
-- Stops and restarts the `dev` environment
+- Stops and restarts
 - Relies on the **background utility `eec-deleter`** for proper state management and cleanup
 
 ---
