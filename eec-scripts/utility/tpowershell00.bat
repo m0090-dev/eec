@@ -18,4 +18,4 @@ shift
 goto loop
 
 :run
-eec run --tag powershell00
+eec run --deleter-hide-window --hide-window --tag powershell00

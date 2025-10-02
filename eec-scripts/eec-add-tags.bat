@@ -1,6 +1,6 @@
 @echo off
 chcp 65001
-echo タグを設定します...
+echo Setting tags...
 
 REM call eec tag add powershell00 --config-file "%USER_EEC_CONFIG_DIR%\eec-config.toml" --program "powershell"  --program-args="-NoExit","-Command","Set-ExecutionPolicy RemoteSigned -Scope Process; checkitems %USER_EEC_CONFIG_DIR%\checkitems.csv"
 REM call eec tag add powershell01 --config-file "%USER_EEC_CONFIG_DIR%\eec-config.toml" --program "powershell"  --program-args="-NoExit","-Command","Set-ExecutionPolicy RemoteSigned -Scope Process; checkitems %USER_EEC_CONFIG_DIR%\checkitems.csv; Set-Location -Path 'D:\win\program\'"
@@ -15,14 +15,13 @@ call eec tag add go-dev --config-file "%USER_EEC_CONFIG_DIR%\go-dev.toml" --impo
 
 REM call eec tag add dev --import "%USER_EEC_CONFIG_DIR%\base-dev.toml" --import "%USER_EEC_CONFIG_DIR%\go-dev.toml" --import "%USER_EEC_CONFIG_DIR%\rust-dev.toml" --import "%USER_EEC_CONFIG_DIR%\java-dev.toml" --import "%USER_EEC_CONFIG_DIR%\r-dev.toml" --import "%USER_EEC_CONFIG_DIR%\ruby-dev.toml" --import "%USER_EEC_CONFIG_DIR%\python-dev.toml" --import "%USER_EEC_CONFIG_DIR%\free-basic-dev.toml" --import "%USER_EEC_CONFIG_DIR%\mingw-dev.toml" --import "%USER_EEC_CONFIG_DIR%\nim-dev.toml" --import "%USER_EEC_CONFIG_DIR%\dotnet-dev.toml" --import  "%USER_EEC_CONFIG_DIR%\use-tools-dev.toml" --import "%USER_EEC_CONFIG_DIR%\gnu-tools-dev.toml" 
 
-:: ベース設定
+REM Base configuration
 call eec tag add dev-base --import "%USER_EEC_CONFIG_DIR%\base-dev.toml"
-
 
 call eec tag add dev-tools --import "%USER_EEC_CONFIG_DIR%\use-tools-dev.toml" ^
                            --import "%USER_EEC_CONFIG_DIR%\gnu-tools-dev.toml"
 
-:: 言語別開発用まとめ
+REM Language-specific development setup
 call eec tag add dev-lang --import "%USER_EEC_CONFIG_DIR%\go-dev.toml" ^
                           --import "%USER_EEC_CONFIG_DIR%\rust-dev.toml" ^
                           --import "%USER_EEC_CONFIG_DIR%\java-dev.toml" ^
@@ -34,15 +33,8 @@ call eec tag add dev-lang --import "%USER_EEC_CONFIG_DIR%\go-dev.toml" ^
                           --import "%USER_EEC_CONFIG_DIR%\mingw-dev.toml" ^
                           --import "%USER_EEC_CONFIG_DIR%\nasm-dev.toml" ^
 
-
-:: 最終的に dev は中間カテゴリを集約
+REM Finally, dev aggregates the intermediate categories
 call eec tag add dev --import dev-base --import dev-lang --import dev-tools
-
-
-
-
-
-
 
 call eec tag add dev-cmd00 --import dev --program cmd --program-args="/K checkitems %USER_EEC_CONFIG_DIR%\checkitems.csv"
 call eec tag add dev-cmd01 --import dev --program cmd --program-args="/K cd D:\win\program && D: && checkitems %USER_EEC_CONFIG_DIR%\checkitems.csv"
@@ -50,6 +42,6 @@ call eec tag add dev-cmd01 --import dev --program cmd --program-args="/K cd D:\w
 call eec tag add dev-shell00 --import dev --program powershell  --program-args="-NoExit","-Command","Set-ExecutionPolicy RemoteSigned -Scope Process; checkitems %USER_EEC_CONFIG_DIR%\checkitems.csv"
 call eec tag add dev-shell01 --import dev --program powershell --program-args="-NoExit","-Command","Set-ExecutionPolicy RemoteSigned -Scope Process; checkitems %USER_EEC_CONFIG_DIR%\checkitems.csv; Set-Location -Path 'D:\win\program\'"
 
-echo タグの設定が終了しました
-:: キー入力を待機
+echo Tag setup completed
+REM Wait for key input
 pause

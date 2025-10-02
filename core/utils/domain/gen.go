@@ -63,7 +63,7 @@ shift
 goto loop
 
 :run
-eec run --deleter-hide-window --tag %TAGNAME% --program %PROGRAM% --program-args=!ARGS!
+eec run --deleter-hide-window --hide-window --tag %TAGNAME% --program %PROGRAM% --program-args=!ARGS!
 `
 
 	windowsTagUtilsScriptProgram = `@echo off
@@ -87,7 +87,7 @@ shift
 goto loop
 
 :run
-eec run --deleter-hide-window --tag %TAGNAME% --program %PROGRAM% 
+eec run --deleter-hide-window --hide-window --tag %TAGNAME% --program %PROGRAM% 
 `
 
 
@@ -112,7 +112,7 @@ shift
 goto loop
 
 :run
-eec run --deleter-hide-window --tag %TAGNAME% --program-args=!ARGS!
+eec run --deleter-hide-window --hide-window --tag %TAGNAME% --program-args=!ARGS!
 `
 
 
@@ -136,7 +136,7 @@ shift
 goto loop
 
 :run
-eec run --tag %TAGNAME%
+eec run --deleter-hide-window --hide-window --tag %TAGNAME%
 `
 	unixTagUtilsScript = ``
 	unixTagSimpleUtilsScript = ``

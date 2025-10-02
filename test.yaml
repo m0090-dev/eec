@@ -10,5 +10,5 @@ envs:
       - "6789かきくけこ"
 
 program:
-  path: ""
+  path: "powershell"
   args: []

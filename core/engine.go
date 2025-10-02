@@ -1,13 +1,14 @@
 package core
 
 import (
+	//"strconv"
+	"time"
 	//"os/exec"
 	"bytes"
 	"context"
 	"encoding/gob"
 	"errors"
 	"fmt"
-	gos "os"
 	"runtime"
 	//"syscall"
 	"github.com/google/uuid"
@@ -53,11 +54,7 @@ func NewEngine(os *types.OS, logger interfaces.Logger) *Engine {
 	}
 }
 
-
-// Run executes the previous run() logic but returns errors instead of os.Exit.
-// It is CLI-agnostic: the CLI just constructs interfaces.xtinterfaces.xtinterfaces.xtinterfaces.xtinterfaces.xt..........RunOptions and provides Engine.
-func (e *Engine) Run(ctx context.Context,opts types.RunOptions) error {
-
+func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
 	var err error
 	// -----------------------*/
 	// 開始時環境変数表示*/
@@ -69,77 +66,22 @@ func (e *Engine) Run(ctx context.Context,opts types.RunOptions) error {
 	}
 
 	e.Logger.Debug().Str("config file", opts.ConfigFile).Str("program", opts.Program).
-		Strs("Program args", opts.ProgramArgs).Str("tag", opts.Tag).Strs("imports", opts.Imports).Int("Wait timeout", int(opts.WaitTimeout)).Bool("Hide window", opts.HideWindow).Str("Deleter path", opts.DeleterPath).Bool("Deleter hide window", opts.DeleterHideWindow).Msg("Run called")
+		Strs("Program args", opts.ProgramArgs).Str("tag", opts.Tag).Strs("imports", opts.Imports).
+		Int("Wait timeout", int(opts.WaitTimeout)).Bool("Hide window", opts.HideWindow).
+		Str("Deleter path", opts.DeleterPath).Bool("Deleter hide window", opts.DeleterHideWindow).
+		Msg("Run called")
 
-	// ----------------------*/
+	
+	// -----------------------*/
 	// deleter起動
+	// -----------------------*/
+	if err:=domain.LaunchDeleter(e.OS,e.Logger,opts);err!=nil{
+		return err
+	}
+
 	// ----------------------*/
-	deleterPath := opts.DeleterPath
-	deleterHideWindow := opts.DeleterHideWindow
-
-	if deleterPath == "" || !e.FS().FileExists(deleterPath) {
-		deleterPath = filepath.Join(types.DEFAULT_DELETER_EXECUTE_NAME)
-	}
-
-	// Start process
-	running, err := domain.IsProcessRunning(e.OS, e.Logger, types.DEFAULT_DELETER_EXECUTE_NAME)
-	if err != nil {
-		e.Logger.Error().Err(err).Msg("failed to check process")
-		return fmt.Errorf("failed to check process: %w", err)
-	}
-
-	if running {
-		e.Logger.Debug().Msgf("[%s] は既に実行中です", deleterPath)
-	} else {
-		e.Logger.Debug().Msgf("[%s] を起動します...", deleterPath)
-		var pid int
-		//var proc *gos.Process
-		//var cmd *exec.Cmd
-		var err error
-
-		if runtime.GOOS == "windows" {
-			// Windows
-			var out, errOut *gos.File
-			if !deleterHideWindow {
-				// 表示する場合のみ Console を繋ぐ
-				out, errOut = e.Console().Stdout(), e.Console().Stderr()
-			}
-
-			pid, _, _, err = e.Executor().StartProcessWithCmd(
-				deleterPath,
-				[]string{}, // 引数なし
-				e.Env().Environ(),
-				nil,               // stdin は使わない
-				out,               // stdout
-				errOut,            // stderr
-				deleterHideWindow, // HideWindow フラグ
-			)
-		} else {
-			// Linux / macOS
-			var out, errOut *gos.File
-			if !deleterHideWindow {
-				// 通常モードは Console に接続
-				out, errOut = e.Console().Stdout(), e.Console().Stderr()
-			}
-			pid, _, _, err = e.Executor().StartProcessWithCmd(
-				deleterPath,
-				[]string{}, // 引数なし
-				e.Env().Environ(),
-				nil,               // stdin
-				out,               // stdout
-				errOut,            // stderr
-				deleterHideWindow, // nohup 相当かどうか
-			)
-		}
-
-		if err != nil {
-			e.Logger.Error().Err(err).Msg("failed to start process")
-			return fmt.Errorf("failed to start process: %w", err)
-		}
-		e.Logger.Info().Msgf("deleter started (pid=%d)", pid)
-	}
-
-	// Read tag data if provided
+	// タグデータ読み込み
+	// ----------------------*/
 	var tagData types.TagData
 	if opts.Tag != "" {
 		tagData, err = types.ReadTagData(e.OS, e.Logger, opts.Tag)
@@ -149,53 +91,26 @@ func (e *Engine) Run(ctx context.Context,opts types.RunOptions) error {
 		}
 	}
 
-	// Resolve configFile / program / args with same precedence as original:
-	configFile := opts.ConfigFile
-	program := opts.Program
-	pArgs := opts.ProgramArgs
-
-	if opts.Tag != "" {
-		if tagData.ConfigFile != "" {
-			configFile = tagData.ConfigFile
-		}
-		if tagData.Program != "" {
-			program = tagData.Program
-		}
-		if len(tagData.ProgramArgs) != 0 {
-			pArgs = tagData.ProgramArgs
-		}
-	}
-
-	// Flag override (already reflected by opts values); keep the same logic as original:
-	// If opts.ConfigFile / Program / ProgramArgs provided they override previous values.
-	if opts.ConfigFile != "" {
-		configFile = opts.ConfigFile
-	}
-	if opts.Program != "" {
-		program = opts.Program
-	}
-	if len(opts.ProgramArgs) != 0 {
-		pArgs = opts.ProgramArgs
-	}
-
-	// Load main config if exists
+	// ----------------------*/
+	// メイン config 読み込み
+	// ----------------------*/
 	var config types.Config
-	if configFile != "" && e.FS().FileExists(configFile) {
-		if config, err = types.ReadConfig(e.OS, e.Logger, configFile); err != nil {
-			e.Logger.Error().Err(err).Str("configFile", configFile).Msg("failed to read config")
-			return fmt.Errorf("failed to read config %s: %w", configFile, err)
+	if opts.ConfigFile != "" && e.FS().FileExists(opts.ConfigFile) {
+		config, err = types.ReadConfig(e.OS, e.Logger, opts.ConfigFile)
+		if err != nil {
+			e.Logger.Error().Err(err).Str("configFile", opts.ConfigFile).Msg("failed to read config")
+			return fmt.Errorf("failed to read config %s: %w", opts.ConfigFile, err)
 		}
 	}
 
-	// Fill from config if program missing
-	if (opts.Tag == "" || tagData.Program == "") && config.Program.Path != "" && program == "" {
-		program = config.Program.Path
-	}
-	if (opts.Tag == "" || len(tagData.ProgramArgs) == 0) && len(config.Program.Args) != 0 && len(pArgs) == 0 {
-		pArgs = config.Program.Args
-	}
+	// ----------------------*/
+	// ResolveRunOptions 呼び出し
+	// ----------------------*/
+	configFile, program, pArgs, finalEnv := domain.ResolveRunOptions(opts, tagData, config, e.OS, e.Logger)
 
+	// ----------------------*/
 	// build manifest/temp prefix
+	// ----------------------*/
 	selfProgram := e.CommandLine().Args()[0]
 	tmpDir := e.FS().TempDir()
 	if tmpDir == "" {
@@ -226,68 +141,27 @@ func (e *Engine) Run(ctx context.Context,opts types.RunOptions) error {
 	}
 	e.Logger.Info().Str("manifest", manifestPath).Msg("created manifest")
 
-	// Merge envs (imports -> tag imports -> main config)
-	allConfigs := []types.Config{}
-
-	// imports from opts
-	for _, imp := range opts.Imports {
-		cfg, rerr := domain.ReadOrFallback(e.OS, e.Logger, imp)
-		if rerr == nil {
-			allConfigs = append(allConfigs, cfg)
-		} else {
-			// ignore missing import: keep behavior consistent with original
-			e.Logger.Debug().Err(rerr).Str("import", imp).Msg("import skipped")
-		}
-	}
-
-	// tag imports
-	for _, imp := range tagData.ImportConfigFiles {
-		cfg, rerr := domain.ReadOrFallback(e.OS, e.Logger, imp)
-		if rerr == nil {
-			allConfigs = append(allConfigs, cfg)
-		} else {
-			e.Logger.Debug().Err(rerr).Str("import", imp).Msg("tag import skipped")
-		}
-	}
-
-	// main config last
-	allConfigs = append(allConfigs, config)
-
-	// start with current environ
-	finalEnv := e.Env().Environ()
-	for _, cfg := range allConfigs {
-		finalEnv = cfg.BuildEnvs(e.OS, e.Logger, finalEnv)
-	}
-
-	// Debug prints similar to original
-	for _, eStr := range finalEnv {
-		if strings.HasPrefix(strings.ToUpper(eStr), "PATH=") {
-			e.Logger.Debug().Str("Final PATH", eStr).Msg("path check")
-		}
-	}
-	//e.Logger.Debug().Str("LookPath PATH", os.Getenv("PATH")).Msg("")
-
+	// ----------------------*/
 	// resolve executable
+	// ----------------------*/
 	if program == "" {
 		return errors.New("no program specified")
 	}
-	/*
-		progPath, err := e.Executor.LookPath(program)
-		if err != nil {
-			e.Logger.Error().Err(err).Str("program", program).Msg("executable not found")
-			return fmt.Errorf("executable not found: %w", err)
-		}
-	*/
 
+	// ----------------------*/
 	// Start process
-	childPid, proc, err := e.Executor().StartProcess(program, pArgs, finalEnv, e.Console().Stdin(), e.Console().Stdout(), e.Console().Stderr(), opts.HideWindow)
+	// ----------------------*/
+	childPid, proc, err := e.Executor().StartProcess(program, pArgs, finalEnv,
+		e.Console().Stdin(), e.Console().Stdout(), e.Console().Stderr(), opts.HideWindow)
 	if err != nil {
 		e.Logger.Error().Err(err).Msg("failed to start process")
 		return fmt.Errorf("failed to start process: %w", err)
 	}
 	e.Logger.Info().Int("PID", childPid).Msg("sub process started")
 
+	// ----------------------*/
 	// write tempData
+	// ----------------------*/
 	tempData := types.TempData{
 		ParentPID:   e.Executor().Getpid(),
 		ChildPID:    childPid,
@@ -299,7 +173,6 @@ func (e *Engine) Run(ctx context.Context,opts types.RunOptions) error {
 	enc := gob.NewEncoder(&buf)
 	if err := enc.Encode(tempData); err != nil {
 		e.Logger.Error().Err(err).Msg("failed to encode temp data")
-		// attempt to stop child process if possible
 		_ = proc.Kill()
 		return fmt.Errorf("failed to encode temp data: %w", err)
 	}
@@ -316,13 +189,16 @@ func (e *Engine) Run(ctx context.Context,opts types.RunOptions) error {
 		Strs("ProgramArgs", tempData.ProgramArgs).
 		Msg("temp file written")
 
-	// Wait for process (with optional timeout)
+	// ----------------------*/
+	// Wait for process
+	// ----------------------*/
 	if err := e.Executor().WaitProcess(proc, opts.WaitTimeout); err != nil {
 		e.Logger.Error().Err(err).Msg("process finished with error or wait failed")
 		return fmt.Errorf("process wait error: %w", err)
 	}
+
 	// -----------------------*/
-	// 終了時環境変数表示*/
+	// 終了時環境変数表示
 	// -----------------------*/
 	{
 		envs := e.Env().Environ()
@@ -354,42 +230,7 @@ func (e *Engine) Info() error {
 	return nil
 }
 
-// Restart attempts to restart a child process based on manifest/temp file.
-// This is a suggestion-level implementation: locate manifest, read temp data, kill old, start new.
-func (e *Engine) Restart(manifestPath string) {
-	/* // Basic stub: caller should implement robust restart flow.*/
-	/*if manifestPath == "" {*/
-	/*return errors.New("manifestPath required")*/
-	/*}*/
-	/*m, err := meta.ReadManifest(manifestPath)*/
-	/*if err != nil {*/
-	/*return err*/
-	/*}*/
-	/*// read temp file*/
-	/*f, err := os.Open(m.TempFilePath)*/
-	/*if err != nil {*/
-	/*return err*/
-	/*}*/
-	/*defer f.Close()*/
-	/*var td meta.TempData*/
-	/*if err := gob.NewDecoder(f).Decode(&td); err != nil {*/
-	/*return err*/
-	/*}*/
-	/*// try to kill old child if exists*/
-	/*if td.ChildPID != 0 {*/
-	/*if proc, err := os.FindProcess(td.ChildPID); err == nil {*/
-	/*_ = proc.Kill() // ignore error: best-effort*/
-	/*}*/
-	/*}*/
-	/*// start new process using previous config*/
-	/*opts := RunOptions{*/
-	/*ConfigFile:  td.ConfigFile,*/
-	/*Program:     td.Program,*/
-	/*ProgramArgs: td.ProgramArgs,*/
-	/*}*/
-	/*// no timeout*/
-	/*return e.Run(continterfaces.Background(), opts)*/
-}
+
 
 // Tag-related core functions (create, list, delete).
 func (e *Engine) TagAdd(name string, tag types.TagData) error {
@@ -414,9 +255,9 @@ func (e *Engine) TagAdd(name string, tag types.TagData) error {
 
 	if err := tag.Write(e.OS, e.Logger, tagName); err != nil {
 		e.Logger.Error().Err(err).Msg("タグファイルの書き込みに失敗しました")
-		fmt.Errorf("Failed to tag file")
+		return fmt.Errorf("Failed to tag file")
 	}
-	fmt.Println("Tag added:", tagName)
+	e.Logger.Info().Str("Tag name", tagName).Msg("Tag added")
 	return nil
 }
 func (e *Engine) TagRead(name string) error {
@@ -424,51 +265,133 @@ func (e *Engine) TagRead(name string) error {
 	data, err := types.ReadTagData(e.OS, e.Logger, tagName)
 	if err != nil {
 		e.Logger.Error().Err(err).Msg("タグファイルの読み込みに失敗しました")
-		fmt.Errorf("Failed to tag read")
+		return fmt.Errorf("Failed to tag read")
 	}
-	fmt.Printf("Tag: %s\n  Config: %s\n  Program: %s\n  Args: %v\n  Import config files: %v\n",
-		tagName, data.ConfigFile, data.Program, data.ProgramArgs, data.ImportConfigFiles)
+
+	e.Logger.Info().
+		Str("Tag", tagName).
+		Str("Config", data.ConfigFile).
+		Str("Program", data.Program).
+		Strs("Args", data.ProgramArgs).
+		Strs("Import config files", data.ImportConfigFiles).
+		Msg("Tag information")
 	return nil
 }
 func (e *Engine) TagList() error {
 	homeDir, err := e.Env().UserHomeDir()
 	if homeDir == "" {
 		e.Logger.Error().Err(err).Msg(fmt.Sprintf("homeDir(%s)が設定されていません", homeDir))
-		fmt.Errorf("Missing required homeDir")
+		return fmt.Errorf("Missing required homeDir")
 	}
 	tagDir := filepath.Join(homeDir, types.DEFAULT_TAG_DIR)
 	fileLists, err := general.GetFilesWithExtension(tagDir, ".tag")
 	if err != nil {
 		e.Logger.Error().Err(err).Msg("タグファイルが見つかりませんでした")
-		fmt.Errorf("Failed to tag list")
+		return fmt.Errorf("Failed to tag list")
 	}
-	fmt.Printf("-- current tag lists  --\n")
-	fmt.Printf("%s\n", strings.Join(fileLists, "\n"))
+	e.Logger.Info().Str("message", "-- current tag lists --").Msg("Tag List Header")
+	e.Logger.Info().Strs("tags", fileLists).Msg("Current tags")
 	return nil
-
 }
+
+
+func (e *Engine) Restart() error {
+	// 1. OS の Temp にある manifest ファイルパスを取得
+	tmpDir := e.FS().TempDir()
+	manifestPath := filepath.Join(tmpDir, "eec_manifest.txt")
+
+	// 2. manifest ファイルを読み込む（中身は tmpFile のパス + PID）
+	content, err := e.FS().ReadFile(manifestPath)
+	if err != nil {
+		e.Logger.Error().Err(err).Msg("failed to read manifest")
+		return fmt.Errorf("failed to read manifest: %w", err)
+	}
+
+	// 3. 先頭のファイルパスだけを取り出す（PID は不要）
+	tmpFilePath := strings.TrimSpace(string(content))
+	if idx := strings.Index(tmpFilePath, " "); idx != -1 {
+		tmpFilePath = tmpFilePath[:idx]
+	}
+	if tmpFilePath == "" {
+		e.Logger.Error().Msg("manifest file is empty")
+		return fmt.Errorf("manifest file is empty")
+	}
+
+	// 4. tempFile を開いて TempData をデコード
+	f, err := e.FS().Open(tmpFilePath)
+	if err != nil {
+		e.Logger.Debug().Err(err).Str("tempFile", tmpFilePath).Msg("cannot open temp file, skipping")
+		return fmt.Errorf("no temp file found for current ChildPID")
+	}
+	defer f.Close()
+
+	var td types.TempData
+	if err := gob.NewDecoder(f).Decode(&td); err != nil {
+		e.Logger.Error().Err(err).Str("tempFile", tmpFilePath).Msg("failed to decode temp data")
+		return fmt.Errorf("failed to decode temp data: %w", err)
+	}
+
+	// 5. ChildPID が生きていればプロセス終了
+	if td.ChildPID != 0 {
+		running, err := domain.IsPIDRunning(e.OS, e.Logger, td.ChildPID)
+		if err != nil {
+			e.Logger.Warn().Err(err).Int("ChildPID", td.ChildPID).Msg("failed to check if child PID is running, continuing")
+		}
+		if running {
+			proc, err := e.Executor().FindProcess(td.ChildPID)
+			if err == nil && proc != nil {
+				if killErr := proc.Kill(); killErr != nil {
+					e.Logger.Warn().Err(killErr).Int("ChildPID", td.ChildPID).Msg("failed to kill old child process, continuing")
+				} else {
+					e.Logger.Info().Int("ChildPID", td.ChildPID).Msg("old child process killed")
+				}
+			}
+		} else {
+			e.Logger.Debug().Int("ChildPID", td.ChildPID).Msg("no existing child process found")
+		}
+	}
+
+	// 6. RunOptions を TempData から復元
+	opts := types.RunOptions{
+		ConfigFile:        td.ConfigFile,
+		Program:           td.Program,
+		ProgramArgs:       td.ProgramArgs,
+		Tag:               td.Tag,
+		Imports:           td.Imports,
+		WaitTimeout:       time.Duration(td.WaitTimeout) * time.Millisecond,
+		HideWindow:        td.HideWindow,
+		DeleterPath:       td.DeleterPath,
+		DeleterHideWindow: td.DeleterHideWindow,
+	}
+
+	// 7. Run 実行（必要に応じて Timeout を適用）
+	if err := e.Run(context.Background(), opts); err != nil {
+		e.Logger.Error().Err(err).Msg("failed to restart process")
+		return fmt.Errorf("failed to restart process: %w", err)
+	}
+
+	e.Logger.Info().Msg("process restarted successfully")
+	return nil
+}
+
 func (e *Engine) TagRemove(name string) error {
 	tagName := name
 	homeDir, err := e.Env().UserHomeDir()
 	if homeDir == "" {
 		e.Logger.Error().Err(err).Msg(fmt.Sprintf("homeDir(%s)が設定されていません", homeDir))
-		fmt.Errorf("Missing required homeDir")
+		return fmt.Errorf("Missing required homeDir")
 	}
 	tagDir := filepath.Join(homeDir, types.DEFAULT_TAG_DIR)
 	tagPath := filepath.Join(tagDir, fmt.Sprintf("%s.tag", tagName))
 	err = e.FS().Remove(tagPath)
 	if err != nil {
-		e.Logger.Error().Err(err).Msg(fmt.Sprintf("タグ名: %sの削除に失敗しました", tagName))
-		fmt.Errorf("Failed to tag remove")
+		e.Logger.Error().
+			Err(err).
+			Str("tagName", tagName).
+			Msg("Failed to remove tag file")
+		return fmt.Errorf("failed to remove tag %s: %w", tagName, err)
 	}
-	fmt.Printf("タグ名: %sを削除しました\n", tagName)
-
-	fileLists, err := general.GetFilesWithExtension(tagDir, ".tag")
-	if err != nil {
-		e.Logger.Error().Err(err).Msg("タグファイルが見つかりませんでした")
-		fmt.Errorf("Failed to tag list")
-	}
-	fmt.Printf("-- current tag lists  --\n")
-	fmt.Printf("%s\n", strings.Join(fileLists, "\n"))
+	e.Logger.Info().Str("deletedTag", tagName).Msg("タグを削除しました")
+	e.TagList()
 	return nil
 }

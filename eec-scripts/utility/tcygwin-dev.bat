@@ -18,4 +18,4 @@ shift
 goto loop
 
 :run
-eec run --tag cygwin-dev
+eec run --deleter-hide-window --hide-window --tag cygwin-dev

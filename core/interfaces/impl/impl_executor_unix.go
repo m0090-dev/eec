@@ -126,3 +126,4 @@ func (d DefaultExecutor) WaitProcess(proc *os.Process, timeout time.Duration) er
 }
 func (d DefaultExecutor) Getpid() int{return os.Getpid()}
 
+func (d DefaultExecutor) FindProcess(pid int) (*os.Process,error) {return os.FindProcess(pid)}

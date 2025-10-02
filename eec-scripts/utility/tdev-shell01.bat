@@ -18,4 +18,4 @@ shift
 goto loop
 
 :run
-eec run --tag dev-shell01
+eec run --deleter-hide-window --hide-window --tag dev-shell01

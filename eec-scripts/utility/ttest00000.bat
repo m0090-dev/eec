@@ -18,4 +18,4 @@ shift
 goto loop
 
 :run
-eec run --tag test00000
+eec run --deleter-hide-window --hide-window --tag test00000

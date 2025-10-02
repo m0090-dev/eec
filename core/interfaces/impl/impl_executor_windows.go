@@ -26,9 +26,12 @@ func (d DefaultExecutor) StartProcess(path string, args []string, env []string, 
 		if _, err := exec.LookPath("cmd.exe"); err == nil {
 			cmd = exec.Command("cmd.exe", "/C", path+" "+strings.Join(args, " "))
 		}
-		if hideWindow{
-			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-		}
+		    if hideWindow {
+            cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+        }else{
+            cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: false,
+	    CreationFlags:  0x00000010}
+	}
 	case "linux", "darwin":
 		// Unix系の場合、sh が存在するか確認
 		if _, err := exec.LookPath("sh"); err == nil {
@@ -119,3 +122,4 @@ func (d DefaultExecutor) WaitProcess(proc *os.Process, timeout time.Duration) er
 }
 func (d DefaultExecutor) Getpid() int{return os.Getpid()}
 
+func (d DefaultExecutor) FindProcess(pid int) (*os.Process,error) {return os.FindProcess(pid)}

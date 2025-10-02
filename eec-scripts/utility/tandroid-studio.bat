@@ -18,4 +18,4 @@ shift
 goto loop
 
 :run
-eec run --tag android-studio
+eec run --deleter-hide-window --hide-window --tag android-studio

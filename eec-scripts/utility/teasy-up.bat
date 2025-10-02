@@ -18,4 +18,4 @@ shift
 goto loop
 
 :run
-eec run --tag easy-up
+eec run --deleter-hide-window --hide-window --tag easy-up

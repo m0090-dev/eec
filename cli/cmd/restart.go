@@ -1,12 +1,12 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/m0090-dev/eec-go/core"
+	"github.com/m0090-dev/eec-go/core/interfaces/impl"
+	"github.com/m0090-dev/eec-go/core/types"
 	"github.com/spf13/cobra"
 )
 
@@ -21,7 +21,12 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("restart called")
+		os := types.NewOS()
+		log := impl.NewDefaultLogger()
+		e := core.NewEngine(&os,log)
+		if err := e.Restart();err != nil {
+			log.Fatal().Err(err).Msg("Failed to restart")
+		}
 	},
 }
 

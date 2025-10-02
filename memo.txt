@@ -1,0 +1,284 @@
+/*
+// Run executes the previous run() logic but returns errors instead of os.Exit.
+func (e *Engine) Run(ctx context.Context,opts types.RunOptions) error {
+
+	var err error
+	// -----------------------
+	// 開始時環境変数表示*/
+	// -----------------------
+	{
+		envs := e.Env().Environ()
+		envStr := strings.Join(envs, ", ")
+		e.Logger.Debug().Str("Started envs", envStr).Msg("")
+	}
+
+	e.Logger.Debug().Str("config file", opts.ConfigFile).Str("program", opts.Program).
+		Strs("Program args", opts.ProgramArgs).Str("tag", opts.Tag).Strs("imports", opts.Imports).Int("Wait timeout", int(opts.WaitTimeout)).Bool("Hide window", opts.HideWindow).Str("Deleter path", opts.DeleterPath).Bool("Deleter hide window", opts.DeleterHideWindow).Msg("Run called")
+
+	// ----------------------*/
+	// deleter起動
+	// ----------------------*/
+	deleterPath := opts.DeleterPath
+	deleterHideWindow := opts.DeleterHideWindow
+
+	if deleterPath == "" || !e.FS().FileExists(deleterPath) {
+		deleterPath = filepath.Join(types.DEFAULT_DELETER_EXECUTE_NAME)
+	}
+
+	// Start process
+	running, err := domain.IsProcessRunning(e.OS, e.Logger, types.DEFAULT_DELETER_EXECUTE_NAME)
+	if err != nil {
+		e.Logger.Error().Err(err).Msg("failed to check process")
+		return fmt.Errorf("failed to check process: %w", err)
+	}
+
+	if running {
+		e.Logger.Debug().Msgf("[%s] は既に実行中です", deleterPath)
+	} else {
+		e.Logger.Debug().Msgf("[%s] を起動します...", deleterPath)
+		var pid int
+		//var proc *gos.Process
+		//var cmd *exec.Cmd
+		var err error
+
+		if runtime.GOOS == "windows" {
+			// Windows
+			var out, errOut *gos.File
+			if !deleterHideWindow {
+				// 表示する場合のみ Console を繋ぐ
+				out, errOut = e.Console().Stdout(), e.Console().Stderr()
+			}
+
+			pid, _, _, err = e.Executor().StartProcessWithCmd(
+				deleterPath,
+				[]string{}, // 引数なし
+				e.Env().Environ(),
+				nil,               // stdin は使わない
+				out,               // stdout
+				errOut,            // stderr
+				deleterHideWindow, // HideWindow フラグ
+			)
+		} else {
+			// Linux / macOS
+			var out, errOut *gos.File
+			if !deleterHideWindow {
+				// 通常モードは Console に接続
+				out, errOut = e.Console().Stdout(), e.Console().Stderr()
+			}
+			pid, _, _, err = e.Executor().StartProcessWithCmd(
+				deleterPath,
+				[]string{}, // 引数なし
+				e.Env().Environ(),
+				nil,               // stdin
+				out,               // stdout
+				errOut,            // stderr
+				deleterHideWindow, // nohup 相当かどうか
+			)
+		}
+
+		if err != nil {
+			e.Logger.Error().Err(err).Msg("failed to start process")
+			return fmt.Errorf("failed to start process: %w", err)
+		}
+		e.Logger.Info().Msgf("deleter started (pid=%d)", pid)
+	}
+
+	// Read tag data if provided
+	var tagData types.TagData
+	if opts.Tag != "" {
+		tagData, err = types.ReadTagData(e.OS, e.Logger, opts.Tag)
+		if err != nil {
+			e.Logger.Error().Err(err).Str("tag", opts.Tag).Msg("failed to read tag")
+			return fmt.Errorf("failed to read tag %s: %w", opts.Tag, err)
+		}
+	}
+
+	// Resolve configFile / program / args with same precedence as original:
+	configFile := opts.ConfigFile
+	program := opts.Program
+	pArgs := opts.ProgramArgs
+
+	if opts.Tag != "" {
+		if tagData.ConfigFile != "" {
+			configFile = tagData.ConfigFile
+		}
+		if tagData.Program != "" {
+			program = tagData.Program
+		}
+		if len(tagData.ProgramArgs) != 0 {
+			pArgs = tagData.ProgramArgs
+		}
+	}
+
+	// Flag override (already reflected by opts values); keep the same logic as original:
+	// If opts.ConfigFile / Program / ProgramArgs provided they override previous values.
+	if opts.ConfigFile != "" {
+		configFile = opts.ConfigFile
+	}
+	if opts.Program != "" {
+		program = opts.Program
+	}
+	if len(opts.ProgramArgs) != 0 {
+		pArgs = opts.ProgramArgs
+	}
+
+	// Load main config if exists
+	var config types.Config
+	if configFile != "" && e.FS().FileExists(configFile) {
+		if config, err = types.ReadConfig(e.OS, e.Logger, configFile); err != nil {
+			e.Logger.Error().Err(err).Str("configFile", configFile).Msg("failed to read config")
+			return fmt.Errorf("failed to read config %s: %w", configFile, err)
+		}
+	}
+
+	// Fill from config if program missing
+	if (opts.Tag == "" || tagData.Program == "") && config.Program.Path != "" && program == "" {
+		program = config.Program.Path
+	}
+	if (opts.Tag == "" || len(tagData.ProgramArgs) == 0) && len(config.Program.Args) != 0 && len(pArgs) == 0 {
+		pArgs = config.Program.Args
+	}
+
+	// build manifest/temp prefix
+	selfProgram := e.CommandLine().Args()[0]
+	tmpDir := e.FS().TempDir()
+	if tmpDir == "" {
+		tmpDir = e.FS().TempDir()
+	}
+	tmpPrefix := fmt.Sprintf("%s_%s_%s.tmp",
+		general.RemoveExtension(filepath.Base(selfProgram)),
+		general.RemoveExtension(filepath.Base(program)),
+		uuid.New().String(),
+	)
+	tmpPath := filepath.Join(tmpDir, tmpPrefix)
+	tmpFile, err := e.FS().Create(tmpPath)
+	if err != nil {
+		e.Logger.Error().Err(err).Str("prefix", tmpPrefix).Msg("failed to create temp file")
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer tmpFile.Close()
+	e.Logger.Info().Str("tempFile", tmpPath).Msg("created temp file")
+
+	manifest := types.Manifest{
+		TempFilePath: tmpFile.Name(),
+		EECPID:       e.Executor().Getpid(),
+	}
+	manifestPath, err := manifest.WriteToManifest()
+	if err != nil {
+		e.Logger.Error().Err(err).Str("manifestPath", manifestPath).Msg("failed to write manifest")
+		return fmt.Errorf("failed to write manifest: %w", err)
+	}
+	e.Logger.Info().Str("manifest", manifestPath).Msg("created manifest")
+
+	// Merge envs (imports -> tag imports -> main config)
+	allConfigs := []types.Config{}
+
+	// imports from opts
+	for _, imp := range opts.Imports {
+		cfg, rerr := domain.ReadOrFallback(e.OS, e.Logger, imp)
+		if rerr == nil {
+			allConfigs = append(allConfigs, cfg)
+		} else {
+			// ignore missing import: keep behavior consistent with original
+			e.Logger.Debug().Err(rerr).Str("import", imp).Msg("import skipped")
+		}
+	}
+
+	// tag imports
+	for _, imp := range tagData.ImportConfigFiles {
+		cfg, rerr := domain.ReadOrFallback(e.OS, e.Logger, imp)
+		if rerr == nil {
+			allConfigs = append(allConfigs, cfg)
+		} else {
+			e.Logger.Debug().Err(rerr).Str("import", imp).Msg("tag import skipped")
+		}
+	}
+
+	// main config last
+	allConfigs = append(allConfigs, config)
+
+	// start with current environ
+	finalEnv := e.Env().Environ()
+	for _, cfg := range allConfigs {
+		finalEnv = cfg.BuildEnvs(e.OS, e.Logger, finalEnv)
+	}
+
+	// Debug prints similar to original
+	for _, eStr := range finalEnv {
+		if strings.HasPrefix(strings.ToUpper(eStr), "PATH=") {
+			e.Logger.Debug().Str("Final PATH", eStr).Msg("path check")
+		}
+	}
+	//e.Logger.Debug().Str("LookPath PATH", os.Getenv("PATH")).Msg("")
+
+	// resolve executable
+	if program == "" {
+		return errors.New("no program specified")
+	}
+	
+	//	progPath, err := e.Executor.LookPath(program)
+//		if err != nil {
+//			e.Logger.Error().Err(err).Str("program", program).Msg("executable not found")
+//			return fmt.Errorf("executable not found: %w", err)
+//		}
+	
+
+	// Start process
+	childPid, proc, err := e.Executor().StartProcess(program, pArgs, finalEnv, e.Console().Stdin(), e.Console().Stdout(), e.Console().Stderr(), opts.HideWindow)
+	if err != nil {
+		e.Logger.Error().Err(err).Msg("failed to start process")
+		return fmt.Errorf("failed to start process: %w", err)
+	}
+	e.Logger.Info().Int("PID", childPid).Msg("sub process started")
+
+	// write tempData
+	tempData := types.TempData{
+		ParentPID:   e.Executor().Getpid(),
+		ChildPID:    childPid,
+		ConfigFile:  configFile,
+		Program:     program,
+		ProgramArgs: pArgs,
+	}
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(tempData); err != nil {
+		e.Logger.Error().Err(err).Msg("failed to encode temp data")
+		// attempt to stop child process if possible
+		_ = proc.Kill()
+		return fmt.Errorf("failed to encode temp data: %w", err)
+	}
+	if _, err := tmpFile.Write(buf.Bytes()); err != nil {
+		e.Logger.Error().Err(err).Msg("failed to write temp file")
+		_ = proc.Kill()
+		return fmt.Errorf("failed to write temp file: %w", err)
+	}
+	e.Logger.Info().
+		Int("ParentPID", tempData.ParentPID).
+		Int("ChildPID", tempData.ChildPID).
+		Str("ConfigFile", tempData.ConfigFile).
+		Str("Program", tempData.Program).
+		Strs("ProgramArgs", tempData.ProgramArgs).
+		Msg("temp file written")
+
+	// Wait for process (with optional timeout)
+	if err := e.Executor().WaitProcess(proc, opts.WaitTimeout); err != nil {
+		e.Logger.Error().Err(err).Msg("process finished with error or wait failed")
+		return fmt.Errorf("process wait error: %w", err)
+	}
+	// -----------------------*/
+	// 終了時環境変数表示*/
+	// -----------------------*/
+	{
+		envs := e.Env().Environ()
+		envStr := strings.Join(envs, ", ")
+		e.Logger.Debug().Str("Finished envs", envStr).Msg("")
+	}
+
+	e.Logger.Info().Msg("process finished normally")
+	return nil
+}
+*/
+
+
+
+
