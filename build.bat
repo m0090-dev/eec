@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-REM build.bat (depends on dotnet, go)
+REM build.bat (depends on dotnet, go,git)
 REM Get target from the first argument
 set "TARGET=%1"
 REM Get mode from the second argument
@@ -77,10 +77,10 @@ if /i "%TARGET%"=="gui" (
     cd cli
     if /i "%MODE%"=="release" (
         echo Building Release...
-        go build -ldflags="-s -w -X github.com/m0090-dev/eec-go/core/ext.BuildMode=release" -o "..\%OUT%"
+        go build -ldflags="-s -w -X github.com/m0090-dev/eec-go/core/types.BuildMode=release" -o "..\%OUT%"
     ) else if /i "%MODE%"=="debug" (
         echo Building Debug...
-        go build -gcflags="all=-N -l" -ldflags="-X github.com/m0090-dev/eec-go/core/ext.BuildMode=debug" -o "..\%OUT%"
+        go build -gcflags="all=-N -l" -ldflags="-X github.com/m0090-dev/eec-go/core/types.BuildMode=debug" -o "..\%OUT%"
     ) else (
         echo ERROR: Invalid mode "%MODE%". Please specify release or debug.
         pause
@@ -91,10 +91,10 @@ if /i "%TARGET%"=="gui" (
     cd core\cexport\
     if /i "%MODE%"=="release" (
         echo Building Release...
-        go build -buildmode=c-shared -ldflags="-s -w -X github.com/m0090-dev/eec-go/core/ext.BuildMode=release" -o "..\..\%OUT%"
+        go build -buildmode=c-shared -ldflags="-s -w -X github.com/m0090-dev/eec-go/core/types.BuildMode=release" -o "..\..\%OUT%"
     ) else if /i "%MODE%"=="debug" (
         echo Building Debug...
-        go build -buildmode=c-shared -gcflags="all=-N -l" -ldflags="-X github.com/m0090-dev/eec-go/core/ext.BuildMode=debug" -o "..\..\%OUT%"
+        go build -buildmode=c-shared -gcflags="all=-N -l" -ldflags="-X github.com/m0090-dev/eec-go/core/types.BuildMode=debug" -o "..\..\%OUT%"
     ) else (
         echo ERROR: Invalid mode "%MODE%". Please specify release or debug.
         pause
@@ -119,9 +119,9 @@ exit /b 0
     set "DEL_OUT=build\eec-deleter%EXT%"
     cd deleter
     if /i "%MODE%"=="release" (
-        go build -ldflags="-s -w -X github.com/m0090-dev/eec-go/core/ext.BuildMode=release" -o "..\%DEL_OUT%"
+        go build -ldflags="-s -w -X github.com/m0090-dev/eec-go/core/types.BuildMode=release" -o "..\%DEL_OUT%"
     ) else (
-        go build -gcflags="all=-N -l" -ldflags="-X github.com/m0090-dev/eec-go/core/ext.BuildMode=debug" -o "..\%DEL_OUT%"
+        go build -gcflags="all=-N -l" -ldflags="-X github.com/m0090-dev/eec-go/core/types.BuildMode=debug" -o "..\%DEL_OUT%"
     )
     cd ..
     echo Build completed: %DEL_OUT%

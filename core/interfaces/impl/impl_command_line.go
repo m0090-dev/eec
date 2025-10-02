@@ -1,10 +1,5 @@
-package ext
-
+package impl
 import "os"
-
-type CommandLine interface {
-	Args() []string
-}
 type DefaultCommandLine struct {
 }
 

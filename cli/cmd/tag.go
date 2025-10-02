@@ -6,7 +6,7 @@ package cmd
 
 import (
 	"github.com/m0090-dev/eec-go/core"
-	"github.com/m0090-dev/eec-go/core/ext"
+	"github.com/m0090-dev/eec-go/core/types"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -24,7 +24,7 @@ var (
 
 func add(name string){
 	e := core.NewEngine(nil,nil)
-	data := ext.TagData{
+	data := types.TagData{
 		ConfigFile: configFileTagFlag,
 		Program: programTagFlag,
 		ProgramArgs: programArgsTagFlag,

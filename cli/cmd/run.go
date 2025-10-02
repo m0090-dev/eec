@@ -7,6 +7,7 @@ import (
 	"time"
 	"context"
 	"github.com/m0090-dev/eec-go/core"
+	"github.com/m0090-dev/eec-go/core/types"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -28,7 +29,7 @@ var deleterHideWindow bool
 
 func run(){
 	e := core.NewEngine(nil,nil)
-	opts := core.RunOptions{
+	opts := types.RunOptions{
 		ConfigFile: configFileRunFlag,
 		Program: programRunFlag,
 		ProgramArgs: programArgsRunFlag,

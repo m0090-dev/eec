@@ -1,17 +1,6 @@
-package ext
-import (
-	"os"
-	_ "github.com/m0090-dev/eec-go/core/utils/general"
-)
+package impl
 
-// Env is minimal env-system abstraction.
-type Env interface {
-	Environ() []string
-	Unsetenv(key string) error
-	Setenv(key string, value string) error
-	UserHomeDir() (string,error)
-}
-
+import "os"
 
 // OSFS is a thin wrapper over os calls.
 type OSEnv struct{}

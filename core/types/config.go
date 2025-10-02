@@ -1,8 +1,9 @@
-package ext
+package types
 
 import (
 	"github.com/google/uuid"
 	"github.com/m0090-dev/eec-go/core/utils/general"
+	"github.com/m0090-dev/eec-go/core/interfaces"
 	"github.com/pelletier/go-toml/v2"
 	"encoding/json"
 	"gopkg.in/yaml.v3"
@@ -26,7 +27,7 @@ type Environ struct {
 	Value interface{} `toml:"value" yaml:"value" json:"value"`
 }
 
-func ReadConfig(os OS,logger Logger,fileName string) (Config, error) {
+func ReadConfig(os OS,logger interfaces.Logger,fileName string) (Config, error) {
 	ext := general.FileExt(fileName)
 	if ext == ".toml" {
 		return ReadToml(os,logger,fileName)
@@ -37,7 +38,7 @@ func ReadConfig(os OS,logger Logger,fileName string) (Config, error) {
 	}
 	return Config{}, nil
 }
-func ReadInlineConfig(os OS,logger Logger,fileName string) (Config, error) {
+func ReadInlineConfig(os OS,logger interfaces.Logger,fileName string) (Config, error) {
 	ext := os.FS.FileExt(fileName)
 	if ext == ".toml" {
 		return ReadInlineToml(os,logger,fileName)
@@ -49,7 +50,7 @@ func ReadInlineConfig(os OS,logger Logger,fileName string) (Config, error) {
 	return Config{}, nil
 }
 
-func ReadJson(os OS,logger Logger,fileName string) (Config, error) {
+func ReadJson(os OS,logger interfaces.Logger,fileName string) (Config, error) {
 	data, err := os.FS.ReadFile(fileName)
 	if err != nil {
 		return Config{}, err
@@ -60,7 +61,7 @@ func ReadJson(os OS,logger Logger,fileName string) (Config, error) {
 	return config, err
 
 }
-func ReadYaml(os OS,logger Logger,fileName string) (Config, error) {
+func ReadYaml(os OS,logger interfaces.Logger,fileName string) (Config, error) {
 	data, err := os.FS.ReadFile(fileName)
 	if err != nil {
 		return Config{}, err
@@ -72,7 +73,7 @@ func ReadYaml(os OS,logger Logger,fileName string) (Config, error) {
 
 }
 
-func ReadToml(os OS,logger Logger,fileName string) (Config, error) {
+func ReadToml(os OS,logger interfaces.Logger,fileName string) (Config, error) {
 	data, err := os.FS.ReadFile(fileName)
 	if err != nil {
 		return Config{}, err
@@ -83,7 +84,7 @@ func ReadToml(os OS,logger Logger,fileName string) (Config, error) {
 	return config, err
 }
 
-func ReadInlineToml(os OS,logger Logger,tomlData string) (Config, error) {
+func ReadInlineToml(os OS,logger interfaces.Logger,tomlData string) (Config, error) {
 	// UUID を使って一時ファイル名を生成
 	tmpFileName := filepath.Join(os.FS.TempDir(), "inline-"+uuid.NewString()+".toml")
 
@@ -99,7 +100,7 @@ func ReadInlineToml(os OS,logger Logger,tomlData string) (Config, error) {
 	// 通常の読み込み処理を使う
 	return ReadToml(os,logger,tmpFileName)
 }
-func ReadInlineJson(os OS,logger Logger,jsonData string) (Config, error) {
+func ReadInlineJson(os OS,logger interfaces.Logger,jsonData string) (Config, error) {
 	// UUID を使って一時ファイル名を生成
 	tmpFileName := filepath.Join(os.FS.TempDir(), "inline-"+uuid.NewString()+".json")
 
@@ -116,7 +117,7 @@ func ReadInlineJson(os OS,logger Logger,jsonData string) (Config, error) {
 	return ReadJson(os,logger,tmpFileName)
 
 }
-func ReadInlineYaml(os OS,logger Logger,yamlData string) (Config, error) {
+func ReadInlineYaml(os OS,logger interfaces.Logger,yamlData string) (Config, error) {
 	// UUID を使って一時ファイル名を生成
 	tmpFileName := filepath.Join(os.FS.TempDir(), "inline-"+uuid.NewString()+".yaml")
 
@@ -320,7 +321,7 @@ func ReadInlineYaml(os OS,logger Logger,yamlData string) (Config, error) {
 /*}*/
 
 
-func (c *Config) ApplyEnvs(os OS,logger Logger) error {
+func (c *Config) ApplyEnvs(os OS,logger interfaces.Logger) error {
 	// OSごとの区切り文字
 	separator := ";"
 	if runtime.GOOS != "windows" {
@@ -400,7 +401,7 @@ func (c *Config) ApplyEnvs(os OS,logger Logger) error {
 }
 
 
-func (c *Config) BuildEnvs(os OS,logger Logger,baseEnv []string) []string {
+func (c *Config) BuildEnvs(os OS,logger interfaces.Logger,baseEnv []string) []string {
 	envMap := make(map[string][]string)
 	separator := ";"
 	if runtime.GOOS != "windows" {

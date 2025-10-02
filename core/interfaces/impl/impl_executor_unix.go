@@ -1,7 +1,7 @@
 // executor_unix.go
 //go:build linux || darwin
 // +build linux darwin
-package ext
+package impl
 
 import (
 	"runtime"
@@ -12,6 +12,13 @@ import (
 	"time"
 	"syscall"
 )
+// DefaultExecutor uses os/exec
+type DefaultExecutor struct{}
+
+
+
+
+
 func (d DefaultExecutor) StartProcess(path string, args []string, env []string, stdin, stdout, stderr *os.File,hideWindow bool) (int, *os.Process, error) {
 	var cmd *exec.Cmd
 

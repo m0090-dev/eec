@@ -11,7 +11,9 @@ import (
 	"runtime"
 	//"syscall"
 	"github.com/google/uuid"
-	"github.com/m0090-dev/eec-go/core/ext"
+	"github.com/m0090-dev/eec-go/core/interfaces"
+	"github.com/m0090-dev/eec-go/core/interfaces/impl"
+	"github.com/m0090-dev/eec-go/core/types"
 	"github.com/m0090-dev/eec-go/core/utils/domain"
 	"github.com/m0090-dev/eec-go/core/utils/general"
 
@@ -20,31 +22,30 @@ import (
 	//"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 // Engine is the core library entrypoint. It contains pluggable implementations
 // for executing commands and file operations so CLI can inject mocks for tests.
 type Engine struct {
-	OS     ext.OS
-	Logger ext.Logger
+	OS     types.OS
+	Logger interfaces.Logger
 }
 
-func (e *Engine) FS() ext.FS                   { return e.OS.FS }
-func (e *Engine) Env() ext.Env                 { return e.OS.Env }
-func (e *Engine) Executor() ext.Executor       { return e.OS.Executor }
-func (e *Engine) CommandLine() ext.CommandLine { return e.OS.CommandLine }
-func (e *Engine) Console() ext.Console         { return e.OS.Console }
+func (e *Engine) FS() interfaces.FS                   { return e.OS.FS }
+func (e *Engine) Env() interfaces.Env                 { return e.OS.Env }
+func (e *Engine) Executor() interfaces.Executor       { return e.OS.Executor }
+func (e *Engine) CommandLine() interfaces.CommandLine { return e.OS.CommandLine }
+func (e *Engine) Console() interfaces.Console         { return e.OS.Console }
 
 // NewEngine returns an Engine with sensible defaults (os-backed).
 
-func NewEngine(os *ext.OS, logger ext.Logger) *Engine {
+func NewEngine(os *types.OS, logger interfaces.Logger) *Engine {
 	if os == nil {
-		temp := ext.NewOS()
+		temp := types.NewOS()
 		os = &temp
 	}
 	if logger == nil {
-		logger = ext.NewDefaultLogger()
+		logger = impl.NewDefaultLogger()
 	}
 	return &Engine{
 		OS:     *os,
@@ -52,23 +53,10 @@ func NewEngine(os *ext.OS, logger ext.Logger) *Engine {
 	}
 }
 
-// RunOptions contains all inputs that were previously taken from flags / tag file.
-type RunOptions struct {
-	ConfigFile  string
-	Program     string
-	ProgramArgs []string
-	Tag         string
-	Imports     []string
-	// Timeout for waiting program; zero means wait indefinitely
-	WaitTimeout       time.Duration
-	HideWindow        bool
-	DeleterPath       string
-	DeleterHideWindow bool
-}
 
 // Run executes the previous run() logic but returns errors instead of os.Exit.
-// It is CLI-agnostic: the CLI just constructs RunOptions and provides Engine.
-func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
+// It is CLI-agnostic: the CLI just constructs interfaces.xtinterfaces.xtinterfaces.xtinterfaces.xtinterfaces.xt..........RunOptions and provides Engine.
+func (e *Engine) Run(ctx context.Context,opts types.RunOptions) error {
 
 	var err error
 	// -----------------------*/
@@ -90,11 +78,11 @@ func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
 	deleterHideWindow := opts.DeleterHideWindow
 
 	if deleterPath == "" || !e.FS().FileExists(deleterPath) {
-		deleterPath = filepath.Join(ext.DEFAULT_DELETER_EXECUTE_NAME)
+		deleterPath = filepath.Join(types.DEFAULT_DELETER_EXECUTE_NAME)
 	}
 
 	// Start process
-	running, err := domain.IsProcessRunning(e.OS, e.Logger, ext.DEFAULT_DELETER_EXECUTE_NAME)
+	running, err := domain.IsProcessRunning(e.OS, e.Logger, types.DEFAULT_DELETER_EXECUTE_NAME)
 	if err != nil {
 		e.Logger.Error().Err(err).Msg("failed to check process")
 		return fmt.Errorf("failed to check process: %w", err)
@@ -152,9 +140,9 @@ func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
 	}
 
 	// Read tag data if provided
-	var tagData ext.TagData
+	var tagData types.TagData
 	if opts.Tag != "" {
-		tagData, err = ext.ReadTagData(e.OS, e.Logger, opts.Tag)
+		tagData, err = types.ReadTagData(e.OS, e.Logger, opts.Tag)
 		if err != nil {
 			e.Logger.Error().Err(err).Str("tag", opts.Tag).Msg("failed to read tag")
 			return fmt.Errorf("failed to read tag %s: %w", opts.Tag, err)
@@ -191,9 +179,9 @@ func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
 	}
 
 	// Load main config if exists
-	var config ext.Config
+	var config types.Config
 	if configFile != "" && e.FS().FileExists(configFile) {
-		if config, err = ext.ReadConfig(e.OS, e.Logger, configFile); err != nil {
+		if config, err = types.ReadConfig(e.OS, e.Logger, configFile); err != nil {
 			e.Logger.Error().Err(err).Str("configFile", configFile).Msg("failed to read config")
 			return fmt.Errorf("failed to read config %s: %w", configFile, err)
 		}
@@ -227,7 +215,7 @@ func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
 	defer tmpFile.Close()
 	e.Logger.Info().Str("tempFile", tmpPath).Msg("created temp file")
 
-	manifest := ext.Manifest{
+	manifest := types.Manifest{
 		TempFilePath: tmpFile.Name(),
 		EECPID:       e.Executor().Getpid(),
 	}
@@ -239,7 +227,7 @@ func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
 	e.Logger.Info().Str("manifest", manifestPath).Msg("created manifest")
 
 	// Merge envs (imports -> tag imports -> main config)
-	allConfigs := []ext.Config{}
+	allConfigs := []types.Config{}
 
 	// imports from opts
 	for _, imp := range opts.Imports {
@@ -300,7 +288,7 @@ func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
 	e.Logger.Info().Int("PID", childPid).Msg("sub process started")
 
 	// write tempData
-	tempData := ext.TempData{
+	tempData := types.TempData{
 		ParentPID:   e.Executor().Getpid(),
 		ChildPID:    childPid,
 		ConfigFile:  configFile,
@@ -358,7 +346,7 @@ func (e *Engine) GenScript() error {
 // Info returns structured information about the environment or config.
 func (e *Engine) Info() error {
 	infos := []string{}
-	infos = append(infos, fmt.Sprintf("version=%s", ext.VERSION))
+	infos = append(infos, fmt.Sprintf("version=%s", types.VERSION))
 	infos = append(infos, fmt.Sprintf("pid=%d", e.Executor().Getpid()))
 	infos = append(infos, fmt.Sprintf("goOS=%s", runtime.GOOS))
 
@@ -400,11 +388,11 @@ func (e *Engine) Restart(manifestPath string) {
 	/*ProgramArgs: td.ProgramArgs,*/
 	/*}*/
 	/*// no timeout*/
-	/*return e.Run(context.Background(), opts)*/
+	/*return e.Run(continterfaces.Background(), opts)*/
 }
 
 // Tag-related core functions (create, list, delete).
-func (e *Engine) TagAdd(name string, tag ext.TagData) error {
+func (e *Engine) TagAdd(name string, tag types.TagData) error {
 	tagName := name
 	// -- デバッグ用 --
 	e.Logger.Debug().
@@ -433,7 +421,7 @@ func (e *Engine) TagAdd(name string, tag ext.TagData) error {
 }
 func (e *Engine) TagRead(name string) error {
 	tagName := name
-	data, err := ext.ReadTagData(e.OS, e.Logger, tagName)
+	data, err := types.ReadTagData(e.OS, e.Logger, tagName)
 	if err != nil {
 		e.Logger.Error().Err(err).Msg("タグファイルの読み込みに失敗しました")
 		fmt.Errorf("Failed to tag read")
@@ -448,7 +436,7 @@ func (e *Engine) TagList() error {
 		e.Logger.Error().Err(err).Msg(fmt.Sprintf("homeDir(%s)が設定されていません", homeDir))
 		fmt.Errorf("Missing required homeDir")
 	}
-	tagDir := filepath.Join(homeDir, ext.DEFAULT_TAG_DIR)
+	tagDir := filepath.Join(homeDir, types.DEFAULT_TAG_DIR)
 	fileLists, err := general.GetFilesWithExtension(tagDir, ".tag")
 	if err != nil {
 		e.Logger.Error().Err(err).Msg("タグファイルが見つかりませんでした")
@@ -466,7 +454,7 @@ func (e *Engine) TagRemove(name string) error {
 		e.Logger.Error().Err(err).Msg(fmt.Sprintf("homeDir(%s)が設定されていません", homeDir))
 		fmt.Errorf("Missing required homeDir")
 	}
-	tagDir := filepath.Join(homeDir, ext.DEFAULT_TAG_DIR)
+	tagDir := filepath.Join(homeDir, types.DEFAULT_TAG_DIR)
 	tagPath := filepath.Join(tagDir, fmt.Sprintf("%s.tag", tagName))
 	err = e.FS().Remove(tagPath)
 	if err != nil {

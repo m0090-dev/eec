@@ -1,4 +1,4 @@
-package ext
+package types
 import (
     "fmt"
     "os"

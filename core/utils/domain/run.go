@@ -1,30 +1,32 @@
 package domain
 
 import (
+	"fmt"
 	"os/exec"
 	"runtime"
 	"strings"
-	"fmt"
-	"github.com/m0090-dev/eec-go/core/ext"
+
+	"github.com/m0090-dev/eec-go/core/interfaces"
+	"github.com/m0090-dev/eec-go/core/types"
 	"github.com/m0090-dev/eec-go/core/utils/general"
 )
 
 // ReadOrFallback is the same helper behavior as original core.
-func ReadOrFallback(os ext.OS,logger ext.Logger,name string) (ext.Config, error) {
-	var cfg ext.Config
+func ReadOrFallback(os types.OS,logger interfaces.Logger,name string) (types.Config, error) {
+	var cfg types.Config
 	if os.FS.FileExists(name) {
-		return ext.ReadConfig(os,logger,name)
+		return types.ReadConfig(os,logger,name)
 	}
-	tagData, err := ext.ReadTagData(os,logger,name)
+	tagData, err := types.ReadTagData(os,logger,name)
 	if err != nil {
 		return cfg, err
 	}
 	for _, f := range tagData.ImportConfigFiles {
-		var fcfg ext.Config
+		var fcfg types.Config
 		if general.FileExists(f) {
-			fcfg, _ = ext.ReadConfig(os,logger,f)
+			fcfg, _ = types.ReadConfig(os,logger,f)
 		} else {
-			fcfg, _ = ext.ReadInlineConfig(os,logger,f)
+			fcfg, _ = types.ReadInlineConfig(os,logger,f)
 		}
 		fcfg.ApplyEnvs(os,logger)
 		cfg = fcfg
@@ -32,7 +34,7 @@ func ReadOrFallback(os ext.OS,logger ext.Logger,name string) (ext.Config, error)
 	return cfg, nil
 }
 
-func IsProcessRunning(os ext.OS,logger ext.Logger,name string) (bool, error) {
+func IsProcessRunning(os types.OS,logger interfaces.Logger,name string) (bool, error) {
 	switch runtime.GOOS {
 	case "windows":
 		if !strings.HasSuffix(name,".exe"){

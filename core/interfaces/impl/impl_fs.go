@@ -1,18 +1,6 @@
-package ext
+package impl
 import "os"
 import "github.com/m0090-dev/eec-go/core/utils/general"
-// FS is minimal file-system abstraction.
-
-type FS interface {
-	Create(name string) (*os.File, error)
-	TempDir() string
-	FileExists(name string) bool
-	MkdirAll(path string,perm uint32) error
-	WriteFile(name string,data[] byte,perm uint32) error
-	ReadFile(name string) ([]byte,error)
-	Remove(name string)error
-	FileExt(path string) string
-}
 
 // OSFS is a thin wrapper over os calls.
 type OSFS struct{}

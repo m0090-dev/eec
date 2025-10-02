@@ -1,15 +1,16 @@
-package ext
+package types
 
 import (
 	"bytes"
 	"fmt"
 	"github.com/rs/zerolog/log"
-
 	//"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/m0090-dev/eec-go/core/utils/general"
+	"github.com/m0090-dev/eec-go/core/interfaces"
+
 )
 
 type TagData struct {
@@ -23,7 +24,7 @@ type TagData struct {
 // ---------------------------
 // TagData バイナリ保存処理
 // ---------------------------
-func (t *TagData) Write(os OS,logger Logger,tagName string) error {
+func (t *TagData) Write(os OS,logger interfaces.Logger,tagName string) error {
 	homeDir, err := os.Env.UserHomeDir()
 	if homeDir == "" {
 		return err
@@ -67,7 +68,7 @@ func (t *TagData) Write(os OS,logger Logger,tagName string) error {
 // --------------------------
 // 読み取り処理
 // --------------------------
-func ReadTagData(os OS,logger Logger,tagName string) (TagData, error) {
+func ReadTagData(os OS,logger interfaces.Logger,tagName string) (TagData, error) {
 	homeDir, _ := os.Env.UserHomeDir()
 	if homeDir == "" {
 		return TagData{}, fmt.Errorf(fmt.Sprintf("%s not set", homeDir))

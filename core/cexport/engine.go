@@ -17,7 +17,7 @@ import (
 	"unsafe"
 	"context"
 	"github.com/m0090-dev/eec-go/core"
-	"github.com/m0090-dev/eec-go/core/ext"
+	"github.com/m0090-dev/eec-go/core/types"
 )
 
 // ----------------- ハンドル管理 -----------------
@@ -148,7 +148,7 @@ func Engine_TagAdd(p C.PEngine, name *C.char, configFile *C.char) C.int {
 	goName := C.GoString(name)
 	goConfig := C.GoString(configFile)
 
-	tag := ext.TagData{
+	tag := types.TagData{
 		ConfigFile: goConfig,
 	}
 

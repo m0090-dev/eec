@@ -5,20 +5,21 @@ import (
 	"testing"
 	"time"
 	"github.com/m0090-dev/eec-go/core"
-	"github.com/m0090-dev/eec-go/core/ext"
+	"github.com/m0090-dev/eec-go/core/types"
+	"github.com/m0090-dev/eec-go/core/interfaces"
 	"github.com/rs/zerolog/log"
 )
 
 func TestEngineRun(t *testing.T) {
-	os := ext.OS{
-		FS: ext.OSFS{},
-		Executor: ext.DefaultExecutor{},
-		Console: ext.DefaultConsole{},
-		Env: ext.OSEnv{},
-		CommandLine: ext.DefaultCommandLine{},
+	os := types.OS{
+		FS: interfaces.OSFS{},
+		Executor: interfaces.DefaultExecutor{},
+		Console: interfaces.DefaultConsole{},
+		Env: interfaces.OSEnv{},
+		CommandLine: interfaces.DefaultCommandLine{},
 	}
 	e := core.NewEngine(&os,nil)
-	opts := core.RunOptions{
+	opts := types.RunOptions{
 		ConfigFile: "../test.toml",
 		Program: "checkitems",
 		WaitTimeout: 1000*time.Second,
@@ -30,7 +31,7 @@ func TestEngineRun(t *testing.T) {
 func TestEngineTag(t *testing.T) {
 	e := core.NewEngine(nil,nil)
 	tagName := "うぇーい"
-	tagData := ext.TagData {
+	tagData := types.TagData {
 		ConfigFile: "../test.toml",
 		ImportConfigFiles: []string{"dev"},
 	}

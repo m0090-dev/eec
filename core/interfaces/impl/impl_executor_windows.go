@@ -1,7 +1,7 @@
 // executor_windows.go
 // +build windows
 //go:build windows
-package ext
+package impl
 
 import (
 	"syscall"
@@ -12,6 +12,10 @@ import (
 	"strings"
 	"time"
 )
+// DefaultExecutor uses os/exec
+type DefaultExecutor struct{}
+
+
 // Executor runs commands. Default uses os/exec.
 func (d DefaultExecutor) StartProcess(path string, args []string, env []string, stdin, stdout, stderr *os.File,hideWindow bool) (int, *os.Process, error) {
 	var cmd *exec.Cmd

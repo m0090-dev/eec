@@ -1,5 +1,5 @@
 // iexecutor.go
-package ext
+package interfaces
 import (
 	"os"
 	"time"
@@ -13,8 +13,3 @@ type Executor interface {
 	Getpid() int
 	StartProcessWithCmd(path string, args []string, env []string, stdin, stdout, stderr *os.File, hideWindow bool) (pid int, proc *os.Process, cmd *exec.Cmd, err error)
 }
-
-// DefaultExecutor uses os/exec
-type DefaultExecutor struct{}
-
-

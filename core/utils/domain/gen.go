@@ -4,7 +4,8 @@ import (
 	"strings"
 	//"github.com/rs/zerolog/log"
 	"github.com/m0090-dev/eec-go/core/utils/general"
-	"github.com/m0090-dev/eec-go/core/ext"
+	"github.com/m0090-dev/eec-go/core/types"
+	"github.com/m0090-dev/eec-go/core/interfaces"
 	//"os"
 	"path/filepath"
 	"runtime"
@@ -251,8 +252,8 @@ func GenUnixWrapScript() string {
 
 /*}*/
 
-func GenWrapScript(os ext.OS, logger ext.Logger) {
-	scriptDir := ext.DEFAULT_SCRIPT_DIR
+func GenWrapScript(os types.OS, logger interfaces.Logger) {
+	scriptDir := types.DEFAULT_SCRIPT_DIR
 	baseName := "eec"
 	guiBaseName := "geec"
 	// ディレクトリがなければ作成
@@ -319,12 +320,12 @@ func GenWrapScript(os ext.OS, logger ext.Logger) {
 	}()
 }
 
-func GenUtilsScript(os ext.OS,logger ext.Logger) {
+func GenUtilsScript(os types.OS,logger interfaces.Logger) {
 	homeDir, _ := os.Env.UserHomeDir()
 	if homeDir == "" {
 		return
 	}
-	tagDir := filepath.Join(homeDir, ext.DEFAULT_TAG_DIR)
+	tagDir := filepath.Join(homeDir, types.DEFAULT_TAG_DIR)
 	tagFileLists, _ := general.GetFilesWithExtension(tagDir, ".tag")
 	tagNameLists := general.RemoveExtensions(general.BaseSlice(tagFileLists))
 	logger.Debug().
@@ -335,7 +336,7 @@ func GenUtilsScript(os ext.OS,logger ext.Logger) {
 		logger.Debug().
 			Str("tagName", name).Msg("")
 
-		tagData, err := ext.ReadTagData(os,logger,name)
+		tagData, err := types.ReadTagData(os,logger,name)
 		if err != nil {
 			logger.Error().Err(err).Str("tag", name).Msg("Failed to read tag data")
 			continue
@@ -343,9 +344,9 @@ func GenUtilsScript(os ext.OS,logger ext.Logger) {
 
 		
 		configFile := tagData.ConfigFile
-		var config ext.Config
+		var config types.Config
 		if configFile != "" && general.FileExists(configFile) {
-			config, err = ext.ReadConfig(os,logger,configFile)
+			config, err = types.ReadConfig(os,logger,configFile)
 			if err != nil {
 				logger.Error().Err(err).Str("configFile", configFile).Msg("Failed to read config file")
 			}
@@ -388,7 +389,7 @@ func GenUtilsScript(os ext.OS,logger ext.Logger) {
 			Str("tagUtilsScriptFileName", tagUtilsScriptFileName).
 			Msg("")
 
-		scriptDir := filepath.Join(ext.DEFAULT_SCRIPT_DIR, ext.DEFAULT_UTILS_SCRIPT_DIR)
+		scriptDir := filepath.Join(types.DEFAULT_SCRIPT_DIR, types.DEFAULT_UTILS_SCRIPT_DIR)
 		tagUtilsScriptFile := filepath.Join(scriptDir, tagUtilsScriptFileName)
 		logger.Debug().
 			Str("tagUtilsScriptFile", tagUtilsScriptFile).
