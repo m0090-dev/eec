@@ -4,7 +4,6 @@ import (
 	"os"
 	"time"
 	"os/exec"
-	"github.com/aymanbagabas/go-pty"
 )
 // Executor runs commands. Default uses os/exec.
 type Executor interface {
@@ -14,9 +13,5 @@ type Executor interface {
 	Getpid() int
        /* StartProcessWithCmd(path string, args []string, env []string, stdin, stdout, stderr *os.File, hideWindow bool) (pid int, proc *os.Process, cmd *exec.Cmd, err error)*/
 	FindProcess(pid int) (*os.Process,error)
-	// StartProcessPty(shell string, args []string) (*pty.Cmd, pty.Pty, error)
-	// RestartProcessPty(p pty.Pty, shell string, args []string) (*pty.Cmd, error)
-	StartProcessPty(shell string, args []string, env []string) (*pty.Cmd, pty.Pty, error)
-	RestartProcessPty(p pty.Pty, shell string, args []string, env []string) (*pty.Cmd, error)
 }
 

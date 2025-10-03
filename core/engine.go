@@ -2,7 +2,7 @@
 package core
 
 import (
-	"io"
+	//"io"
 	//"strconv"
 	"time"
 	"os/exec"
@@ -19,7 +19,7 @@ import (
 	"github.com/m0090-dev/eec-go/core/types"
 	"github.com/m0090-dev/eec-go/core/utils/domain"
 	"github.com/m0090-dev/eec-go/core/utils/general"
-"github.com/aymanbagabas/go-pty"
+//"github.com/aymanbagabas/go-pty"
 	//"github.com/rs/zerolog/log"
 	//"os"
 	//"os/exec"
@@ -31,7 +31,7 @@ import (
 // for executing commands and file operations so CLI can inject mocks for tests.
 type Engine struct {
 	OS     types.OS
-	PtyData types.PtyData
+	//PtyData types.PtyData
 	Logger interfaces.Logger
 }
 
@@ -158,36 +158,15 @@ if configFile != "" {
 	// -----------------------*/
 	var childPid int
 	var cmd *exec.Cmd
-	var ptyCmd *pty.Cmd
+	
 
-	if opts.Pty {
-		// 環境変数作成
-		baseEnv := e.Env().Environ()
-		envForPty := config.BuildEnvs(e.OS, e.Logger, baseEnv)
 
-		if e.PtyData.P == nil {
-			ptyCmd, p, err := e.Executor().StartProcessPty(program, pArgs, envForPty)
-			if err != nil {
-				tmpFile.Close()
-				return fmt.Errorf("failed to start process with pty: %w", err)
-			}
-			e.PtyData = types.PtyData{P: p, Cmd: ptyCmd}
 
-			// PTY 入出力接続
-			go func() { _, _ = io.Copy(e.PtyData.P, e.Console().Stdin()) }()
-			go func() { _, _ = io.Copy(e.Console().Stdout(), e.PtyData.P) }()
 
-			childPid = ptyCmd.Process.Pid
-		} else {
-			ptyCmd, err = e.Executor().RestartProcessPty(e.PtyData.P, program, pArgs, envForPty)
-			if err != nil {
-				tmpFile.Close()
-				return fmt.Errorf("failed to restart process with pty: %w", err)
-			}
-			e.PtyData.Cmd = ptyCmd
-			childPid = ptyCmd.Process.Pid
-		}
-	} else {
+
+
+
+
 		cmd, err = e.Executor().StartProcess(program, pArgs, finalEnv,
 			e.Console().Stdin(), e.Console().Stdout(), e.Console().Stderr(), opts.HideWindow)
 		if err != nil {
@@ -195,7 +174,6 @@ if configFile != "" {
 			return fmt.Errorf("failed to start process: %w", err)
 		}
 		childPid = cmd.Process.Pid
-	}
 
 	// ----------------------*/
 	// write tempData immediately
@@ -206,7 +184,12 @@ if configFile != "" {
 		ConfigFile:  configFile,
 		Program:     program,
 		ProgramArgs: pArgs,
-		Pty:         opts.Pty,
+		Tag:	     opts.Tag,
+		Imports: opts.Imports,
+		WaitTimeout: int64(opts.WaitTimeout),
+		HideWindow: opts.HideWindow,
+		DeleterPath: opts.DeleterPath,
+		DeleterHideWindow: opts.DeleterHideWindow,
 	}
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(tempData); err != nil {
@@ -245,15 +228,9 @@ if configFile != "" {
 	// ----------------------*/
 	// Wait for process
 	// -----------------------*/
-	if opts.Pty {
-		if err := e.Executor().WaitProcess(e.PtyData.Cmd.Process, opts.WaitTimeout); err != nil {
-			return fmt.Errorf("PTY process wait error: %w", err)
-		}
-	} else {
 		if err := e.Executor().WaitProcess(cmd.Process, opts.WaitTimeout); err != nil {
 			return fmt.Errorf("process wait error: %w", err)
 		}
-	}
 
 	// -----------------------*/
 	// 終了時環境変数表示
@@ -405,132 +382,7 @@ func (e *Engine) loadTempData() (types.TempData, string, error) {
     return td, tmpFilePath, nil
 }
 
-/*
-func (e *Engine) RestartPTY() error {
-    // TempData 取得
-    td, _, err := e.loadTempData()
-    if err != nil {
-        return err
-    }
 
-    // 古い PTY Kill
-    if e.PtyData.P != nil && e.PtyData.Cmd != nil {
-        _ = e.PtyData.Cmd.Process.Kill()
-    }
-
-    // Config 読み込み
-    var config types.Config
-    if td.ConfigFile != "" && e.FS().FileExists(td.ConfigFile) {
-        config, err = types.ReadConfig(e.OS, e.Logger, td.ConfigFile)
-        if err != nil {
-            e.Logger.Error().Err(err).Str("configFile", td.ConfigFile).Msg("failed to read config")
-            return fmt.Errorf("failed to read config %s: %w", td.ConfigFile, err)
-        }
-    }
-
-    // 新しい PTY 作成
-    ptyObj, err := pty.New()
-    if err != nil {
-        return fmt.Errorf("failed to create new PTY: %w", err)
-    }
-
-    cmd := ptyObj.Command(td.Program, td.ProgramArgs...)
-
-    // 環境変数セット
-    baseEnv := e.Env().Environ()
-    cmd.Env = config.BuildEnvs(e.OS, e.Logger, baseEnv)
-
-e.Logger.Debug().
-    Strs("envs", config.BuildEnvs(e.OS, e.Logger, baseEnv)).
-    Msg("BuildEnvs result")
-
-
-    // PTY 起動
-    if err := cmd.Start(); err != nil {
-        return fmt.Errorf("failed to start new PTY: %w", err)
-    }
-
-    // e.PtyData 更新
-    e.PtyData.P = ptyObj
-    e.PtyData.Cmd = cmd
-
-    // 入出力接続
-    go func() { _, _ = io.Copy(e.PtyData.P, e.Console().Stdin()) }()
-    go func() { _, _ = io.Copy(e.Console().Stdout(), e.PtyData.P) }()
-
-    e.Logger.Info().Msg("PTY restarted successfully with updated environment")
-    return nil
-}
-*/
-
-func (e *Engine) RestartPTY() error {
-    // TempData 取得
-    td, _, err := e.loadTempData()
-    if err != nil {
-        return err
-    }
-
-    // 古い PTY Kill
-    if e.PtyData.P != nil && e.PtyData.Cmd != nil {
-        _ = e.PtyData.Cmd.Process.Kill()
-    }
-
-    // Config 読み込み
-    var config types.Config
-    if td.ConfigFile != "" && e.FS().FileExists(td.ConfigFile) {
-        config, err = types.ReadConfig(e.OS, e.Logger, td.ConfigFile)
-        if err != nil {
-            e.Logger.Error().
-                Err(err).
-                Str("configFile", td.ConfigFile).
-                Msg("failed to read config")
-            return fmt.Errorf("failed to read config %s: %w", td.ConfigFile, err)
-        }
-    }
-
-    // 新しい PTY 作成
-    ptyObj, err := pty.New()
-    if err != nil {
-        return fmt.Errorf("failed to create new PTY: %w", err)
-    }
-
-    cmd := ptyObj.Command(td.Program, td.ProgramArgs...)
-
-    // 環境変数セット
-    // 1. 前回のPTY環境をベースに
-    // 2. 無ければシステム環境をベースに
-    baseEnv := e.PtyData.Env
-    if len(baseEnv) == 0 {
-        baseEnv = e.Env().Environ()
-    }
-
-    cmd.Env = config.BuildEnvs(e.OS, e.Logger, baseEnv)
-
-    e.Logger.Debug().
-        Strs("envs", cmd.Env).
-        Msg("BuildEnvs result after restart")
-
-    // PTY 起動
-    if err := cmd.Start(); err != nil {
-        return fmt.Errorf("failed to start new PTY: %w", err)
-    }
-
-    // e.PtyData 更新
-    e.PtyData.P = ptyObj
-    e.PtyData.Cmd = cmd
-    e.PtyData.Env = cmd.Env // 環境を保持
-
-    // 入出力接続
-    go func() { _, _ = io.Copy(e.PtyData.P, e.Console().Stdin()) }()
-    go func() { _, _ = io.Copy(e.Console().Stdout(), e.PtyData.P) }()
-
-    e.Logger.Info().
-        Str("program", td.Program).
-        Strs("args", td.ProgramArgs).
-        Msg("PTY restarted successfully with updated environment")
-
-    return nil
-}
 
 
 func (e *Engine) Restart() error {
@@ -570,7 +422,7 @@ func (e *Engine) Restart() error {
 	}
 
 	// 5. 既存プロセス終了（PTY の場合は Kill をスキップ）
-	if td.ChildPID != 0 && !td.Pty {
+	if td.ChildPID != 0{
 		running, err := domain.IsPIDRunning(e.OS, e.Logger, td.ChildPID)
 		if err != nil {
 			e.Logger.Warn().Err(err).Int("ChildPID", td.ChildPID).Msg("failed to check if child PID, continuing")
@@ -600,23 +452,20 @@ func (e *Engine) Restart() error {
 		HideWindow:        td.HideWindow,
 		DeleterPath:       td.DeleterPath,
 		DeleterHideWindow: td.DeleterHideWindow,
-		Pty:               td.Pty,
 	}
 
 	// 7. 再起動処理
-	if td.Pty {
-		// PTY 再起動専用
-		if err := e.RestartPTY(); err != nil {
-			e.Logger.Error().Err(err).Msg("failed to restart PTY process")
-			return fmt.Errorf("failed to restart PTY process: %w", err)
-		}
-	} else {
-		// 通常プロセスは Run で再実行
+
+
+
+
+
+			// 通常プロセスは Run で再実行
 		if err := e.Run(context.Background(), opts); err != nil {
 			e.Logger.Error().Err(err).Msg("failed to restart process")
 			return fmt.Errorf("failed to restart process: %w", err)
 		}
-	}
+	
 
 	e.Logger.Info().Msg("process restarted successfully")
 	return nil
