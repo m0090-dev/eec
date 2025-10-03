@@ -4,7 +4,7 @@
 It allows you to safely manage and execute environments based on configuration files (TOML/YAML/JSON) without polluting your system environment.  
 
 With `eec`, you can:
-- Run programs with temporary environments defined in TOML files  
+- Run programs with temporary environments defined in configuration files  
 - Group multiple environments under "tags" for easy access  
 - Generate utility scripts for quick launching  
 - Use interactive or restart modes for flexible workflow  
