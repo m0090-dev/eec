@@ -1,10 +1,17 @@
 @echo off
 chcp 65001 >nul
-REM build.bat (depends on dotnet, go,git)
+REM build.bat (depends on dotnet, go, git)
+
 REM Get target from the first argument
 set "TARGET=%1"
 REM Get mode from the second argument
 set "MODE=%2"
+
+REM --- Get current git commit hash (short) ---
+for /f %%i in ('git rev-parse --short HEAD 2^>nul') do set "BUILD_HASH=%%i"
+if "%BUILD_HASH%"=="" (
+    set "BUILD_HASH=unknown"
+)
 
 if "%TARGET%"=="" (
     echo ERROR: Please specify a target: cli / gui / lib
@@ -22,6 +29,7 @@ if "%MODE%"=="" (
 
 echo Target: %TARGET%
 echo Mode: %MODE%
+echo BuildHash: %BUILD_HASH%
 
 REM Clean up Go modules
 go mod tidy
@@ -77,10 +85,10 @@ if /i "%TARGET%"=="gui" (
     cd cli
     if /i "%MODE%"=="release" (
         echo Building Release...
-        go build -ldflags="-s -w -X github.com/m0090-dev/eec-go/core/types.BuildMode=release" -o "..\%OUT%"
+        go build -ldflags="-s -w -X github.com/m0090-dev/eec-go/core/types.BuildMode=release -X github.com/m0090-dev/eec-go/core/types.BuildHash=%BUILD_HASH%" -o "..\%OUT%"
     ) else if /i "%MODE%"=="debug" (
         echo Building Debug...
-        go build -gcflags="all=-N -l" -ldflags="-X github.com/m0090-dev/eec-go/core/types.BuildMode=debug" -o "..\%OUT%"
+        go build -gcflags="all=-N -l" -ldflags="-X github.com/m0090-dev/eec-go/core/types.BuildMode=debug -X github.com/m0090-dev/eec-go/core/types.BuildHash=%BUILD_HASH%" -o "..\%OUT%"
     ) else (
         echo ERROR: Invalid mode "%MODE%". Please specify release or debug.
         pause
@@ -91,10 +99,10 @@ if /i "%TARGET%"=="gui" (
     cd core\cexport\
     if /i "%MODE%"=="release" (
         echo Building Release...
-        go build -buildmode=c-shared -ldflags="-s -w -X github.com/m0090-dev/eec-go/core/types.BuildMode=release" -o "..\..\%OUT%"
+        go build -buildmode=c-shared -ldflags="-s -w -X github.com/m0090-dev/eec-go/core/types.BuildMode=release -X github.com/m0090-dev/eec-go/core/types.BuildHash=%BUILD_HASH%" -o "..\..\%OUT%"
     ) else if /i "%MODE%"=="debug" (
         echo Building Debug...
-        go build -buildmode=c-shared -gcflags="all=-N -l" -ldflags="-X github.com/m0090-dev/eec-go/core/types.BuildMode=debug" -o "..\..\%OUT%"
+        go build -buildmode=c-shared -gcflags="all=-N -l" -ldflags="-X github.com/m0090-dev/eec-go/core/types.BuildMode=debug -X github.com/m0090-dev/eec-go/core/types.BuildHash=%BUILD_HASH%" -o "..\..\%OUT%"
     ) else (
         echo ERROR: Invalid mode "%MODE%". Please specify release or debug.
         pause
@@ -119,11 +127,10 @@ exit /b 0
     set "DEL_OUT=build\eec-deleter%EXT%"
     cd deleter
     if /i "%MODE%"=="release" (
-        go build -ldflags="-s -w -X github.com/m0090-dev/eec-go/core/types.BuildMode=release" -o "..\%DEL_OUT%"
+        go build -ldflags="-s -w -X github.com/m0090-dev/eec-go/core/types.BuildMode=release -X github.com/m0090-dev/eec-go/core/types.BuildHash=%BUILD_HASH%" -o "..\%DEL_OUT%"
     ) else (
-        go build -gcflags="all=-N -l" -ldflags="-X github.com/m0090-dev/eec-go/core/types.BuildMode=debug" -o "..\%DEL_OUT%"
+        go build -gcflags="all=-N -l" -ldflags="-X github.com/m0090-dev/eec-go/core/types.BuildMode=debug -X github.com/m0090-dev/eec-go/core/types.BuildHash=%BUILD_HASH%" -o "..\%DEL_OUT%"
     )
     cd ..
     echo Build completed: %DEL_OUT%
     exit /b 0
-

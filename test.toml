@@ -3,7 +3,8 @@ key = "PATH"
 value = [
 	"TESTDIR/TESTO/1919/",
 	"D:\\win\\dev-tools\\mpv\\",
-	"D:\\win\\program\\py\\main-project\\checkitems\\dist"
+	"D:\\win\\program\\py\\main-project\\checkitems\\dist",
+	"D:\\win\\dev-tools\\neovim\\app\\bin\\"
 ]
 
 [[envs]]

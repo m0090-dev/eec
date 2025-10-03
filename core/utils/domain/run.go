@@ -115,22 +115,25 @@ func LaunchDeleter(os types.OS,logger interfaces.Logger,opts types.RunOptions) e
 	} else {
 		logger.Debug().Msgf("[%s] を起動します...", deleterPath)
 		var pid int
+		var execCmd *exec.Cmd
 		if runtime.GOOS == "windows" {
 			var out, errOut *gos.File
 			if !deleterHideWindow {
 				out, errOut = os.Console.Stdout(), os.Console.Stderr()
 			}
-			pid, _, _, err = os.Executor.StartProcessWithCmd(
+			execCmd, err = os.Executor.StartProcess(
 				deleterPath, []string{}, os.Env.Environ(), nil, out, errOut, deleterHideWindow,
 			)
+			pid = execCmd.Process.Pid
 		} else {
 			var out, errOut *gos.File
 			if !deleterHideWindow {
 				out, errOut = os.Console.Stdout(), os.Console.Stderr()
 			}
-			pid, _, _, err = os.Executor.StartProcessWithCmd(
+			execCmd, err = os.Executor.StartProcess(
 				deleterPath, []string{}, os.Env.Environ(), nil, out, errOut, deleterHideWindow,
 			)
+			pid = execCmd.Process.Pid
 		}
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to start process")

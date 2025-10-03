@@ -282,3 +282,182 @@ func (e *Engine) Run(ctx context.Context,opts types.RunOptions) error {
 
 
 
+func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
+	var err error
+
+	// -----------------------*/
+	// 開始時環境変数表示
+	// -----------------------*/
+	envs := e.Env().Environ()
+	e.Logger.Debug().Str("Started envs", strings.Join(envs, ", ")).Msg("")
+
+	e.Logger.Debug().
+		Str("config file", opts.ConfigFile).
+		Str("program", opts.Program).
+		Strs("Program args", opts.ProgramArgs).
+		Str("tag", opts.Tag).
+		Strs("imports", opts.Imports).
+		Int("Wait timeout", int(opts.WaitTimeout)).
+		Bool("Hide window", opts.HideWindow).
+		Str("Deleter path", opts.DeleterPath).
+		Bool("Deleter hide window", opts.DeleterHideWindow).
+		Msg("Run called")
+
+	// -----------------------*/
+	// deleter起動
+	// -----------------------*/
+	if err := domain.LaunchDeleter(e.OS, e.Logger, opts); err != nil {
+		return err
+	}
+
+	// ----------------------*/
+	// タグデータ読み込み
+	// -----------------------*/
+	var tagData types.TagData
+	if opts.Tag != "" {
+		tagData, err = types.ReadTagData(e.OS, e.Logger, opts.Tag)
+		if err != nil {
+			e.Logger.Error().Err(err).Str("tag", opts.Tag).Msg("failed to read tag")
+			return fmt.Errorf("failed to read tag %s: %w", opts.Tag, err)
+		}
+	}
+
+	// ----------------------*/
+	// メイン config 読み込み
+	// -----------------------*/
+	var config types.Config
+	if opts.ConfigFile != "" && e.FS().FileExists(opts.ConfigFile) {
+		config, err = types.ReadConfig(e.OS, e.Logger, opts.ConfigFile)
+		if err != nil {
+			e.Logger.Error().Err(err).Str("configFile", opts.ConfigFile).Msg("failed to read config")
+			return fmt.Errorf("failed to read config %s: %w", opts.ConfigFile, err)
+		}
+	}
+
+	// ----------------------*/
+	// ResolveRunOptions 呼び出し
+	// -----------------------*/
+	configFile, program, pArgs, finalEnv := domain.ResolveRunOptions(opts, tagData, config, e.OS, e.Logger)
+	if program == "" {
+		return errors.New("no program specified")
+	}
+
+	// ----------------------*/
+	// build temp file
+	// -----------------------*/
+	selfProgram := e.CommandLine().Args()[0]
+	tmpDir := e.FS().TempDir()
+	tmpPrefix := fmt.Sprintf("%s_%s_%s.tmp",
+		general.RemoveExtension(filepath.Base(selfProgram)),
+		general.RemoveExtension(filepath.Base(program)),
+		uuid.New().String(),
+	)
+	tmpPath := filepath.Join(tmpDir, tmpPrefix)
+	tmpFile, err := e.FS().Create(tmpPath)
+	if err != nil {
+		e.Logger.Error().Err(err).Str("prefix", tmpPrefix).Msg("failed to create temp file")
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+
+	e.Logger.Info().Str("tempFile", tmpPath).Msg("created temp file")
+	
+	// manifest 書き込み
+	manifest := types.Manifest{
+		TempFilePath: tmpPath,
+		EECPID:       e.Executor().Getpid(),
+	}
+	if _, err := manifest.WriteToManifest(); err != nil {
+		return fmt.Errorf("failed to write manifest: %w", err)
+	}
+
+	// ----------------------*/
+	// Start process
+	// -----------------------*/
+	var childPid int
+	if opts.Pty {
+		// PTY専用
+		var cmd *pty.Cmd
+		if e.PtyData.P == nil {
+			cmd, p, err := e.Executor().StartProcessPty(program, pArgs)
+			if err != nil {
+				tmpFile.Close()
+				return fmt.Errorf("failed to start process with pty: %w", err)
+			}
+			e.PtyData = types.PtyData{P: p, Cmd: cmd}
+
+			// PTY 入出力接続
+			go func() { _, _ = io.Copy(e.PtyData.P, e.Console().Stdin()) }()
+			go func() { _, _ = io.Copy(e.Console().Stdout(), e.PtyData.P) }()
+		} else {
+			cmd, err = e.Executor().RestartProcessPty(e.PtyData.P, program, pArgs)
+			if err != nil {
+				tmpFile.Close()
+				return fmt.Errorf("failed to restart process with pty: %w", err)
+			}
+			e.PtyData.Cmd = cmd
+		}
+		childPid = e.PtyData.Cmd.Process.Pid
+
+		e.Logger.Info().Int("PTY PID", childPid).Msg("PTY sub process started")
+
+		if err := e.Executor().WaitProcess(e.PtyData.Cmd.Process, opts.WaitTimeout); err != nil {
+			tmpFile.Close()
+			return fmt.Errorf("PTY process wait error: %w", err)
+		}
+	} else {
+		// 通常プロセス
+		var cmd *exec.Cmd
+		cmd, err = e.Executor().StartProcess(program, pArgs, finalEnv,
+			e.Console().Stdin(), e.Console().Stdout(), e.Console().Stderr(), opts.HideWindow)
+		if err != nil {
+			tmpFile.Close()
+			return fmt.Errorf("failed to start process: %w", err)
+		}
+		childPid = cmd.Process.Pid
+
+		e.Logger.Info().Int("PID", childPid).Msg("normal sub process started")
+
+		if err := e.Executor().WaitProcess(cmd.Process, opts.WaitTimeout); err != nil {
+			tmpFile.Close()
+			return fmt.Errorf("process wait error: %w", err)
+		}
+	}
+
+	// ----------------------*/
+	// write tempData
+	// -----------------------*/
+	tempData := types.TempData{
+		ParentPID:   e.Executor().Getpid(),
+		ChildPID:    childPid,
+		ConfigFile:  configFile,
+		Program:     program,
+		ProgramArgs: pArgs,
+		Pty:         opts.Pty,
+	}
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(tempData); err != nil {
+		tmpFile.Close()
+		return fmt.Errorf("failed to encode temp data: %w", err)
+	}
+	if _, err := tmpFile.Write(buf.Bytes()); err != nil {
+		tmpFile.Close()
+		return fmt.Errorf("failed to write temp file: %w", err)
+	}
+
+	// **ここで必ず Close()**
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temp file: %w", err)
+	}
+
+	// -----------------------*/
+	// 終了時環境変数表示
+	// -----------------------*/
+	envs = e.Env().Environ()
+	e.Logger.Debug().Str("Finished envs", strings.Join(envs, ", ")).Msg("")
+	e.Logger.Info().Msg("process finished normally")
+	return nil
+}
+
+
+
+
