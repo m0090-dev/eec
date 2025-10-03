@@ -1,7 +1,7 @@
 # eec (env-exec)
 
 `eec` is a **Go-based Environment Execution Controller**.  
-It allows you to safely manage and execute environments based on configuration files (TOML) without polluting your system environment.  
+It allows you to safely manage and execute environments based on configuration files (TOML/YAML/JSON) without polluting your system environment.  
 
 With `eec`, you can:
 - Run programs with temporary environments defined in TOML files  
