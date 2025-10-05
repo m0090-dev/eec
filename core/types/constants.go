@@ -4,7 +4,7 @@ package types
 // 定数
 // --------------------------
 const (
-	VERSION = "0.2-dev"
+	VERSION = "0.3-dev"
 	DEFAULT_TAG_DIR = ".eec"
 	DEFAULT_MANIFEST_FILE_NAME = "eec_manifest"
 	DEFAULT_UTILS_SCRIPT_DIR = "utility"

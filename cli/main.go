@@ -9,11 +9,11 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"os"
-	"fmt"
+	//"fmt"
 )
 
 func init() {
-	fmt.Printf("Build mode: %s\n",types.BuildMode)
+	//fmt.Printf("Build mode: %s\n",types.BuildMode)
 	if types.BuildMode == "debug" {
 	  zerolog.SetGlobalLevel(zerolog.DebugLevel)
         } else {

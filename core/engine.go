@@ -262,6 +262,7 @@ func (e *Engine) Info() error {
 	infos = append(infos, fmt.Sprintf("pid=%d", e.Executor().Getpid()))
 	infos = append(infos, fmt.Sprintf("goOS=%s", runtime.GOOS))
 	infos = append(infos,fmt.Sprintf("commitHash=%s",types.BuildHash))
+	infos = append(infos,fmt.Sprintf("buildMode=%s",types.BuildMode))
 	e.Logger.Info().Strs("infos", infos).Msg("eec Info messages")
 	return nil
 }
