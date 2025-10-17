@@ -1,0 +1,6 @@
+[[envs]]
+key = "PATH"
+value = [
+	"$(DEV_TOOLS_PATH)\\haxe-toolkit\\haxe",
+	"$(DEV_TOOLS_PATH)\\haxe-toolkit\\neko",
+]

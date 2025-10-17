@@ -1,0 +1,5 @@
+[[envs]]
+key = "PATH"
+value = [
+	"$(DEV_TOOLS_PATH)\\gnu-make\\bin"
+]

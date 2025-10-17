@@ -1,0 +1,8 @@
+[[envs]] 
+key = "TEST_IKUIKU_ENV"
+vakue = "おっ"
+[[envs]]
+key = "PATH"
+value = [
+	"test/test13131"
+]
