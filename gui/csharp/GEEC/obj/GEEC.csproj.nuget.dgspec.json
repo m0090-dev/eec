@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\win\\program\\go\\main-project\\eec\\gui\\csharp\\GEEC\\GEEC.csproj": {}
+    "D:\\win\\program\\go\\main-project\\eec-refactor-build\\gui\\csharp\\GEEC\\GEEC.csproj": {}
   },
   "projects": {
-    "D:\\win\\program\\go\\main-project\\eec\\gui\\csharp\\GEEC\\GEEC.csproj": {
+    "D:\\win\\program\\go\\main-project\\eec-refactor-build\\gui\\csharp\\GEEC\\GEEC.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\win\\program\\go\\main-project\\eec\\gui\\csharp\\GEEC\\GEEC.csproj",
+        "projectUniqueName": "D:\\win\\program\\go\\main-project\\eec-refactor-build\\gui\\csharp\\GEEC\\GEEC.csproj",
         "projectName": "GEEC",
-        "projectPath": "D:\\win\\program\\go\\main-project\\eec\\gui\\csharp\\GEEC\\GEEC.csproj",
+        "projectPath": "D:\\win\\program\\go\\main-project\\eec-refactor-build\\gui\\csharp\\GEEC\\GEEC.csproj",
         "packagesPath": "C:\\Users\\m\\.nuget\\packages\\",
-        "outputPath": "D:\\win\\program\\go\\main-project\\eec\\gui\\csharp\\GEEC\\obj\\",
+        "outputPath": "D:\\win\\program\\go\\main-project\\eec-refactor-build\\gui\\csharp\\GEEC\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\m\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -52,6 +52,8 @@
               "version": "[11.3.6, )"
             },
             "Avalonia.Diagnostics": {
+              "include": "None",
+              "suppressParent": "All",
               "target": "Package",
               "version": "[11.3.6, )"
             },

@@ -4,14 +4,14 @@ package core
 import (
 	//"io"
 	//"strconv"
-	"time"
-	"os/exec"
 	"bytes"
 	"context"
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"os/exec"
 	"runtime"
+	"time"
 	//"syscall"
 	"github.com/google/uuid"
 	"github.com/m0090-dev/eec-go/core/interfaces"
@@ -19,7 +19,7 @@ import (
 	"github.com/m0090-dev/eec-go/core/types"
 	"github.com/m0090-dev/eec-go/core/utils/domain"
 	"github.com/m0090-dev/eec-go/core/utils/general"
-//"github.com/aymanbagabas/go-pty"
+	//"github.com/aymanbagabas/go-pty"
 	//"github.com/rs/zerolog/log"
 	//"os"
 	//"os/exec"
@@ -30,7 +30,7 @@ import (
 // Engine is the core library entrypoint. It contains pluggable implementations
 // for executing commands and file operations so CLI can inject mocks for tests.
 type Engine struct {
-	OS     types.OS
+	OS types.OS
 	//PtyData types.PtyData
 	Logger interfaces.Logger
 }
@@ -56,7 +56,6 @@ func NewEngine(os *types.OS, logger interfaces.Logger) *Engine {
 		Logger: logger,
 	}
 }
-
 
 func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
 	var err error
@@ -118,12 +117,12 @@ func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
 		return errors.New("no program specified")
 	}
 
-// make configFile absolute if present
-if configFile != "" {
-    if abs, err := filepath.Abs(configFile); err == nil {
-        configFile = abs
-    }
-}
+	// make configFile absolute if present
+	if configFile != "" {
+		if abs, err := filepath.Abs(configFile); err == nil {
+			configFile = abs
+		}
+	}
 
 	// ----------------------*/
 	// build temp file
@@ -158,37 +157,29 @@ if configFile != "" {
 	// -----------------------*/
 	var childPid int
 	var cmd *exec.Cmd
-	
 
-
-
-
-
-
-
-
-		cmd, err = e.Executor().StartProcess(program, pArgs, finalEnv,
-			e.Console().Stdin(), e.Console().Stdout(), e.Console().Stderr(), opts.HideWindow)
-		if err != nil {
-			tmpFile.Close()
-			return fmt.Errorf("failed to start process: %w", err)
-		}
-		childPid = cmd.Process.Pid
+	cmd, err = e.Executor().StartProcess(program, pArgs, finalEnv,
+		e.Console().Stdin(), e.Console().Stdout(), e.Console().Stderr(), opts.HideWindow)
+	if err != nil {
+		tmpFile.Close()
+		return fmt.Errorf("failed to start process: %w", err)
+	}
+	childPid = cmd.Process.Pid
 
 	// ----------------------*/
 	// write tempData immediately
 	// -----------------------*/
 	tempData := types.TempData{
-		ParentPID:   e.Executor().Getpid(),
-		ChildPID:    childPid,
-		ConfigFile:  configFile,
-		Program:     program,
-		ProgramArgs: pArgs,
-		Tag:	     opts.Tag,
-		Imports: opts.Imports,
-		WaitTimeout: int64(opts.WaitTimeout),
-		HideWindow: opts.HideWindow,
-		DeleterPath: opts.DeleterPath,
+		ParentPID:         e.Executor().Getpid(),
+		ChildPID:          childPid,
+		ConfigFile:        configFile,
+		Program:           program,
+		ProgramArgs:       pArgs,
+		Tag:               opts.Tag,
+		Imports:           opts.Imports,
+		WaitTimeout:       int64(opts.WaitTimeout),
+		HideWindow:        opts.HideWindow,
+		DeleterPath:       opts.DeleterPath,
 		DeleterHideWindow: opts.DeleterHideWindow,
 	}
 	var buf bytes.Buffer
@@ -225,12 +216,12 @@ if configFile != "" {
 		Strs("ProgramArgs", tempData.ProgramArgs).
 		Msg("temp file written")
 
-	// ----------------------*/
-	// Wait for process
-	// -----------------------*/
-		if err := e.Executor().WaitProcess(cmd.Process, opts.WaitTimeout); err != nil {
-			return fmt.Errorf("process wait error: %w", err)
-		}
+		// ----------------------*/
+		// Wait for process
+		// -----------------------*/
+	if err := e.Executor().WaitProcess(cmd.Process, opts.WaitTimeout); err != nil {
+		return fmt.Errorf("process wait error: %w", err)
+	}
 
 	// -----------------------*/
 	// 終了時環境変数表示
@@ -240,11 +231,6 @@ if configFile != "" {
 	e.Logger.Info().Msg("process finished normally")
 	return nil
 }
-
-
-
-
-
 
 // ----------------- Stubs for other command core behaviors ------------------
 
@@ -261,29 +247,27 @@ func (e *Engine) Info() error {
 	infos = append(infos, fmt.Sprintf("version=%s", types.VERSION))
 	infos = append(infos, fmt.Sprintf("pid=%d", e.Executor().Getpid()))
 	infos = append(infos, fmt.Sprintf("goOS=%s", runtime.GOOS))
-	infos = append(infos,fmt.Sprintf("commitHash=%s",types.BuildHash))
-	infos = append(infos,fmt.Sprintf("buildMode=%s",types.BuildMode))
+	infos = append(infos, fmt.Sprintf("commitHash=%s", types.BuildHash))
+	infos = append(infos, fmt.Sprintf("buildMode=%s", types.BuildMode))
 	e.Logger.Info().Strs("infos", infos).Msg("eec Info messages")
 	return nil
 }
-
 
 func (e *Engine) Repl() error {
 	return nil
 }
 
-
 // Tag-related core functions (create, list, delete).
 func (e *Engine) TagAdd(name string, tag types.TagData) error {
 	tagName := name
-	
+
 	// make configFile absolute if present
 	if tag.ConfigFile != "" {
-    	if abs, err := filepath.Abs(tag.ConfigFile); err == nil {
-        	tag.ConfigFile = abs
-    	}
+		if abs, err := filepath.Abs(tag.ConfigFile); err == nil {
+			tag.ConfigFile = abs
+		}
 	}
-	
+
 	// -- デバッグ用 --
 	e.Logger.Debug().
 		Str("tagName", tagName).
@@ -344,47 +328,44 @@ func (e *Engine) TagList() error {
 }
 
 func (e *Engine) loadTempData() (types.TempData, string, error) {
-    var td types.TempData
+	var td types.TempData
 
-    // 1. OS の Temp にある manifest ファイルパスを取得
-    tmpDir := e.FS().TempDir()
-    manifestPath := filepath.Join(tmpDir, "eec_manifest.txt")
+	// 1. OS の Temp にある manifest ファイルパスを取得
+	tmpDir := e.FS().TempDir()
+	manifestPath := filepath.Join(tmpDir, "eec_manifest.txt")
 
-    // 2. manifest ファイルを読み込む
-    content, err := e.FS().ReadFile(manifestPath)
-    if err != nil {
-        e.Logger.Error().Err(err).Str("manifestPath", manifestPath).Msg("failed to read manifest")
-        return td, "", fmt.Errorf("failed to read manifest: %w", err)
-    }
+	// 2. manifest ファイルを読み込む
+	content, err := e.FS().ReadFile(manifestPath)
+	if err != nil {
+		e.Logger.Error().Err(err).Str("manifestPath", manifestPath).Msg("failed to read manifest")
+		return td, "", fmt.Errorf("failed to read manifest: %w", err)
+	}
 
-    // 3. 先頭のファイルパスだけを取り出す
-    tmpFilePath := strings.TrimSpace(string(content))
-    if idx := strings.Index(tmpFilePath, " "); idx != -1 {
-        tmpFilePath = tmpFilePath[:idx]
-    }
-    if tmpFilePath == "" {
-        e.Logger.Error().Str("manifestPath", manifestPath).Msg("manifest file is empty")
-        return td, "", fmt.Errorf("manifest file is empty")
-    }
+	// 3. 先頭のファイルパスだけを取り出す
+	tmpFilePath := strings.TrimSpace(string(content))
+	if idx := strings.Index(tmpFilePath, " "); idx != -1 {
+		tmpFilePath = tmpFilePath[:idx]
+	}
+	if tmpFilePath == "" {
+		e.Logger.Error().Str("manifestPath", manifestPath).Msg("manifest file is empty")
+		return td, "", fmt.Errorf("manifest file is empty")
+	}
 
-    // 4. tempFile を開いて TempData をデコード
-    f, err := e.FS().Open(tmpFilePath)
-    if err != nil {
-        e.Logger.Debug().Err(err).Str("tempFile", tmpFilePath).Msg("cannot open temp file")
-        return td, tmpFilePath, fmt.Errorf("no temp file found for current ChildPID")
-    }
-    defer f.Close()
+	// 4. tempFile を開いて TempData をデコード
+	f, err := e.FS().Open(tmpFilePath)
+	if err != nil {
+		e.Logger.Debug().Err(err).Str("tempFile", tmpFilePath).Msg("cannot open temp file")
+		return td, tmpFilePath, fmt.Errorf("no temp file found for current ChildPID")
+	}
+	defer f.Close()
 
-    if err := gob.NewDecoder(f).Decode(&td); err != nil {
-        e.Logger.Error().Err(err).Str("tempFile", tmpFilePath).Msg("failed to decode temp data")
-        return td, tmpFilePath, fmt.Errorf("failed to decode temp data: %w", err)
-    }
+	if err := gob.NewDecoder(f).Decode(&td); err != nil {
+		e.Logger.Error().Err(err).Str("tempFile", tmpFilePath).Msg("failed to decode temp data")
+		return td, tmpFilePath, fmt.Errorf("failed to decode temp data: %w", err)
+	}
 
-    return td, tmpFilePath, nil
+	return td, tmpFilePath, nil
 }
-
-
-
 
 func (e *Engine) Restart() error {
 	// 1. manifest ファイルパス取得
@@ -423,7 +404,7 @@ func (e *Engine) Restart() error {
 	}
 
 	// 5. 既存プロセス終了（PTY の場合は Kill をスキップ）
-	if td.ChildPID != 0{
+	if td.ChildPID != 0 {
 		running, err := domain.IsPIDRunning(e.OS, e.Logger, td.ChildPID)
 		if err != nil {
 			e.Logger.Warn().Err(err).Int("ChildPID", td.ChildPID).Msg("failed to check if child PID, continuing")
@@ -457,24 +438,15 @@ func (e *Engine) Restart() error {
 
 	// 7. 再起動処理
 
-
-
-
-
-			// 通常プロセスは Run で再実行
-		if err := e.Run(context.Background(), opts); err != nil {
-			e.Logger.Error().Err(err).Msg("failed to restart process")
-			return fmt.Errorf("failed to restart process: %w", err)
-		}
-	
+	// 通常プロセスは Run で再実行
+	if err := e.Run(context.Background(), opts); err != nil {
+		e.Logger.Error().Err(err).Msg("failed to restart process")
+		return fmt.Errorf("failed to restart process: %w", err)
+	}
 
 	e.Logger.Info().Msg("process restarted successfully")
 	return nil
 }
-
-
-
-
 
 func (e *Engine) TagRemove(name string) error {
 	tagName := name

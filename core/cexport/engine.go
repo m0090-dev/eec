@@ -110,7 +110,7 @@ func Engine_Run(p C.PEngine,
 	}
 
 	// RunOptions を構築
-	opts := core.RunOptions{
+	opts := types.RunOptions{
 		ConfigFile:  goConfigFile,
 		Program:     goProgram,
 		ProgramArgs: goProgramArgs,
