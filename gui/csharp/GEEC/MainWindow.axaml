@@ -15,8 +15,9 @@
         <MenuItem Header="スクリプト生成" Click="GenScript_Click"/>
         <MenuItem Header="終了" Click="Quit_Click"/>
       </MenuItem>
+      <MenuItem Header="About..">
+      </MenuItem>
     </Menu>
-
     <!-- メインコンテンツ全体をスクロール可能に -->
     <ScrollViewer VerticalScrollBarVisibility="Auto">
       <StackPanel x:Name="RunConfigList" Margin="20" >

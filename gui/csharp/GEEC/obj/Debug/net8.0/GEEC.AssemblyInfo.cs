@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GEEC")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c47bd1b3ed2e6ac8253a54e8e67cb47b74ff5e58")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+40adb39fc0578f1fe91c76df23f5ef919db9b4c0")]
 [assembly: System.Reflection.AssemblyProductAttribute("GEEC")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GEEC")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -1,4 +1,4 @@
-# eec (env-exec)
+# eec (env-exec) 
 
 `eec` is a **Go-based Environment Execution Controller**.  
 It allows you to safely manage and execute environments based on configuration files (TOML/YAML/JSON) without polluting your system environment.  
@@ -8,6 +8,7 @@ With `eec`, you can:
 - Group multiple environments under "tags" for easy access  
 - Generate utility scripts for quick launching  
 - Use interactive or restart modes for flexible workflow  
+- Build the CLI, GUI, and libraries using `mage` (`mage buildcli`, `mage buildgui`, `mage buildlib`)
 
 ---
 
@@ -17,6 +18,11 @@ With `eec`, you can:
 - Script generation for shortcut commands
 - Safe execution without modifying the global system
 - Interactive REPL and restart functionality with state management
+- Build automation using `mage`:
+  - `mage buildcli debug` / `mage buildcli release`
+  - `mage buildgui debug` / `mage buildgui release`
+  - `mage buildlib debug` / `mage buildlib release`
+  - **Note:** On Windows, `GOOS=linux` is **not supported** for `mage buildlib`
 
 ---
 
@@ -127,6 +133,7 @@ Effect:
 - Manage complex multi-language setups through configuration files and tags
 - Improve usability through generated scripts
 - Support safe and flexible workflows with REPL and restart features
+- Automate building of CLI, GUI, and libraries via `mage`
 
 ---
 
@@ -135,4 +142,4 @@ Effect:
 `eec (env-exec)` is not just a tag manager,  
 but a **Go-based tool for cleanly managing, isolating, and executing environments**.  
 
-It is especially useful for testing, multi-environment development, and scenarios where you need clean separation from the system configuration.
+It is especially useful for testing, multi-environment development, and scenarios where you need clean separation from the system configuration.  
