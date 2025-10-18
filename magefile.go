@@ -7,10 +7,15 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"path/filepath"
+	//"runtime"
 )
 
 // デフォルトターゲット（引数なし）
 var Default = BuildCLIRelease
+var defaultTargetBinaryName = "eec"
+var targetExt = ""
+
 
 // --- Common utilities ---
 func run(name string, args ...string) error {
@@ -44,12 +49,19 @@ func BuildCLI(mode string) error {
 	if mode == "" {
 		mode = "release"
 	}
+	goos := os.Getenv("GOOS")
+	if goos == "windows"{
+		targetExt = ".exe"
+	} else {
+		targetExt = ""
+	}
 	fmt.Printf("Building CLI (%s)...\n", mode)
 	os.Chdir("cli")
 	defer os.Chdir("..")
-
+	target := defaultTargetBinaryName + targetExt
+        buildFile := filepath.Join("../build",target)
 	ldflags, gcflags := buildModeArg(mode)
-	args := []string{"build", "-ldflags", strings.Join(ldflags, " "), "-o", "../build/eec.exe"}
+	args := []string{"build", "-ldflags", strings.Join(ldflags, " "), "-o", buildFile}
 	if len(gcflags) > 0 {
 		args = append(args, "-gcflags", strings.Join(gcflags, " "))
 	}
@@ -95,12 +107,21 @@ func BuildLib(mode string) error {
 	if mode == "" {
 		mode = "release"
 	}
+
+	goos := os.Getenv("GOOS")
+	if goos == "windows" {
+		targetExt = ".dll"	
+	} else {
+		targetExt = ".so"
+	}
 	fmt.Printf("Building shared lib (%s)...\n", mode)
 	os.Chdir("core/cexport")
 	defer os.Chdir("../..")
-
+	
+	target := "libcengine" + targetExt
+	buildFile := filepath.Join("../../build/",target)
 	ldflags, gcflags := buildModeArg(mode)
-	args := []string{"build", "-buildmode=c-shared", "-ldflags", strings.Join(ldflags, " "), "-o", "../../build/libcengine.dll"}
+	args := []string{"build", "-buildmode=c-shared", "-ldflags", strings.Join(ldflags, " "), "-o", buildFile}
 	if len(gcflags) > 0 {
 		args = append(args, "-gcflags", strings.Join(gcflags, " "))
 	}
