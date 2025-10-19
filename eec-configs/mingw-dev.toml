@@ -1,7 +1,0 @@
-[[envs]]
-key = "PATH"
-value = [
-	# "$(DEV_TOOLS_PATH)\\i686-12.1.0-release-posix-dwarf-rt_v10-rev3\\mingw32\\bin\\",
-        #"$(DEV_TOOLS_PATH)\\x86_64-12.2.0-release-posix-seh-ucrt-rt_v10-rev2\\mingw64\\bin",
-    	#"$(DEV_TOOLS_PATH)\\x86_64-12.2.0-release-posix-seh-msvcrt-rt_v10-rev2\\mingw64\\bin",
-]

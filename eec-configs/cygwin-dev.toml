@@ -1,8 +1,0 @@
-[program]
-path = "powershell"
-[[envs]]
-key = "PATH"
-value = [
-	"D:\\win\\dev-tools\\cygwin64\\bin\\",
-	"D:\\win\\dev-tools\\cygwin64",
-]

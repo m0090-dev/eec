@@ -1,7 +1,0 @@
-[[envs]]
-key = "PATH"
-value = [
-	"$(DEV_PROGRAM_PATH)\\py\\main-project\\renban-file-print\\dist\\renban-file-print",
-	"$(DEV_PROGRAM_PATH)\\nim\\main-project\\touch-nim\\build\\",
-	"$(DEV_TOOLS_PATH)\\mpv\\"
-]

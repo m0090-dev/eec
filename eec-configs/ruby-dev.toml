@@ -1,6 +1,0 @@
-[[envs]]
-key = "PATH"
-value = [
-      "$(DEV_TOOLS_PATH)\\uru"
-]
-

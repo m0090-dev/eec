@@ -1,6 +1,0 @@
-[[envs]]
-key = "PATH"
-value = [
-	"D:\\win\\dev-tools\\python\\pyenv\\pyenv-win\\versions\\3.12.0",
-	"D:\\win\\dev-tools\\python\\pyenv\\pyenv-win\\versions\\3.12.0\\Scripts",
-]
