@@ -7,7 +7,7 @@ REM call eec tag add powershell01 --config-file "%USER_EEC_CONFIG_DIR%\eec-confi
 REM call eec tag add cmd00 --config-file "%USER_EEC_CONFIG_DIR%\eec-config.toml"  --program "cmd" --program-args="/K checkitems %USER_EEC_CONFIG_DIR%\checkitems.csv"
 REM call eec tag add cmd01 --config-file "%USER_EEC_CONFIG_DIR%\eec-config.toml" --program "cmd" --program-args="/K cd D:\win\program && D: && checkitems %USER_EEC_CONFIG_DIR%\checkitems.csv"
 
-set "USER_EEC_CONFIG_DIR=D:\win\program\go\main-project\eec\eec-configs"
+set "USER_EEC_CONFIG_DIR=D:\win\program\go\main-project\eec-configs"
 
 call eec tag add android-studio00 --config-file "%USER_EEC_CONFIG_DIR%\android-studio.toml" --program "D:\win\dev-tools\android\android-studio\bin\studio64"
 call eec tag add easy-up --program "D:\win\program\go\main-project\google-drive-easy-uploader\build\easy-up"
