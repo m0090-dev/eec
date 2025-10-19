@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "UcQUfpjAcQM=",
+  "dgSpecHash": "2dGWt1Xmm5w=",
   "success": true,
-  "projectFilePath": "D:\\win\\program\\go\\main-project\\eec-refactor-build\\gui\\csharp\\GEEC\\GEEC.csproj",
+  "projectFilePath": "D:\\win\\program\\go\\main-project\\eec\\gui\\csharp\\GEEC\\GEEC.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\m\\.nuget\\packages\\avalonia\\11.3.6\\avalonia.11.3.6.nupkg.sha512",
     "C:\\Users\\m\\.nuget\\packages\\avalonia.angle.windows.natives\\2.1.25547.20250602\\avalonia.angle.windows.natives.2.1.25547.20250602.nupkg.sha512",
