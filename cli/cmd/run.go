@@ -74,7 +74,7 @@ func init() {
 	runCmd.Flags().StringVarP(&configFileRunFlag, "config-file","c", "", "Config file")
 
 	runCmd.Flags().StringVarP(&programRunFlag, "program","p", "", "Program name")
-	runCmd.Flags().StringSliceVar(&programArgsRunFlag, "program-args", []string{}, "Program args")
+	runCmd.Flags().StringSliceVarP(&programArgsRunFlag, "program-args","a", []string{}, "Program args")
 
 	runCmd.Flags().StringVarP(&tagRunFlag, "tag","t", "", "Tag name")
 	runCmd.Flags().StringSliceVarP(&importsRunFlag, "import","i", []string{}, "Import config files")

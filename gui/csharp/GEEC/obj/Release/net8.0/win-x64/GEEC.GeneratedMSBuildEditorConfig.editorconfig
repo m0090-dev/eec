@@ -15,12 +15,12 @@ build_property.PlatformNeutralAssembly =
 build_property.EnforceExtendedAnalyzerRules = 
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = GEEC
-build_property.ProjectDir = D:\win\program\go\main-project\eec-refactor-build\gui\csharp\GEEC\
+build_property.ProjectDir = D:\win\program\go\main-project\eec\gui\csharp\GEEC\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 
-[D:/win/program/go/main-project/eec-refactor-build/gui/csharp/GEEC/App.axaml]
+[D:/win/program/go/main-project/eec/gui/csharp/GEEC/App.axaml]
 build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
 
-[D:/win/program/go/main-project/eec-refactor-build/gui/csharp/GEEC/MainWindow.axaml]
+[D:/win/program/go/main-project/eec/gui/csharp/GEEC/MainWindow.axaml]
 build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
