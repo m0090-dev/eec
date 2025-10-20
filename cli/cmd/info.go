@@ -15,20 +15,30 @@ func info(){
 			log.Fatal().Err(err).Msg("Failed to info")
 		}
 }
-// infoCmd represents the info command
+
+// ---------------------------
+// Cobra Command Definition - info
+// ---------------------------
 var infoCmd = &cobra.Command{
 	Use:   "info",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Show detailed information about the eec environment and build",
+	Long: `Displays detailed information about the eec installation, 
+including version, build mode, commit hash, Go runtime, and platform details.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+This command helps verify the running version of eec, 
+the Go environment it was built with, and other diagnostic data.
+
+Examples:
+  eec info
+
+Effect:
+  • Prints eec version, build type, commit hash, and Go runtime info
+  • Useful for debugging, support, or verifying installed builds`,
 	Run: func(cmd *cobra.Command, args []string) {
 		info()
 	},
 }
+
 
 func init() {
 	rootCmd.AddCommand(infoCmd)

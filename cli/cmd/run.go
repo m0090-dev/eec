@@ -43,31 +43,41 @@ func run() {
 	}
 }
 
+
 // ---------------------------
-// Cobra コマンド定義
+// Cobra Command Definition
 // ---------------------------
 var runCmd = &cobra.Command{
 	Use:   "run",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Run a program in a temporary environment defined by a config or tag",
+	Long: `Runs a program within an isolated environment loaded from a configuration file 
+(TOML / YAML / JSON) or a registered tag. This allows you to execute programs safely 
+without polluting the global system environment.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Examples:
+  eec run -c test.toml -p bash
+  eec run -t dev -p powershell --program-args="-NoExit","-Command","Write-Output 'hello world'"
+
+Effect:
+  • Loads environment variables from the specified config file or tag
+  • Launches the target program within that temporary environment
+  • Cleans up after execution without affecting the global system
+
+This command is useful for testing, isolated development, and running tools 
+in clean, reproducible environments.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		run()
 	},
 }
 
 func init() {
-	runCmd.Flags().StringVar(&configFileRunFlag, "config-file", "", "Config file")
+	runCmd.Flags().StringVarP(&configFileRunFlag, "config-file","c", "", "Config file")
 
-	runCmd.Flags().StringVar(&programRunFlag, "program", "", "Program name")
+	runCmd.Flags().StringVarP(&programRunFlag, "program","p", "", "Program name")
 	runCmd.Flags().StringSliceVar(&programArgsRunFlag, "program-args", []string{}, "Program args")
 
-	runCmd.Flags().StringVar(&tagRunFlag, "tag", "", "Tag name")
-	runCmd.Flags().StringSliceVar(&importsRunFlag, "import", []string{}, "Import config files")
+	runCmd.Flags().StringVarP(&tagRunFlag, "tag","t", "", "Tag name")
+	runCmd.Flags().StringSliceVarP(&importsRunFlag, "import","i", []string{}, "Import config files")
 	runCmd.Flags().Int("wait-time-out", waitTimeoutRunFlag, "Time to wait before timeout in seconds")
 	runCmd.Flags().BoolVarP(&HideWindowRunFlag, "hide-window", "", false, "Hide the console window when running")
 	runCmd.Flags().StringVar(&deleterPathRunFlag, "deleter-path", "", "Deleter path")

@@ -19,36 +19,53 @@ func genScript(){
 		}
 }
 
-
-// genCmd represents the gen command
+// ---------------------------
+// Cobra Command Definition - gen
+// ---------------------------
 var genCmd = &cobra.Command{
 	Use:   "gen",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Generate utility scripts or other helper assets for eec",
+	Long: `The 'gen' command provides utilities to generate scripts or helper assets
+that make eec usage more convenient. 
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Currently, it supports generating quick-launch scripts for registered tags
+so that you can easily start environments without typing long commands.
+
+Examples:
+  eec gen script
+`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("gen called")
+		fmt.Println("Use a subcommand such as 'eec gen script'")
 	},
 }
 
-// scriptCmd represents the script command
+// ---------------------------
+// Cobra Command Definition - script
+// ---------------------------
 var scriptCmd = &cobra.Command{
 	Use:   "script",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Generate quick-launch scripts for registered tags",
+	Long: `Generates utility scripts that make it easy to launch programs 
+in specific environments using registered tags.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+On Windows, it creates .bat files (e.g., tdev.bat).
+On Linux or macOS, it creates shell scripts (e.g., tdev).
+
+For example, if a tag named 'dev' exists:
+  tdev cmd     → runs 'cmd' within the 'dev' environment
+
+Examples:
+  eec gen script
+Effect:
+  • Scans registered tags
+  • Creates platform-appropriate launcher scripts
+  • Simplifies frequent environment switching`,
 	Run: func(cmd *cobra.Command, args []string) {
 		genScript()
 	},
 }
+
+
 
 func init() {
 	rootCmd.AddCommand(genCmd)

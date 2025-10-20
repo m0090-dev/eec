@@ -464,3 +464,98 @@ func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
 
 
 
+
+
+
+
+/*func add(args[] string){*/
+	/*tagName := args[0]*/
+		/*// -- デバッグ用 --*/
+		/*log.Debug().*/
+			/*Str("tagName", tagName).*/
+			/*Msg("")*/
+		/*log.Debug().*/
+			/*Str("configFileFlag", configFileTagFlag).*/
+			/*Msg("")*/
+		/*log.Debug().*/
+			/*Str("programFlag", programTagFlag).*/
+			/*Msg("")*/
+		/*log.Debug().*/
+			/*Str("programArgsFlag", strings.Join(programArgsTagFlag, ", ")).*/
+			/*Msg("")*/
+		/*log.Debug().*/
+			/*Str("Import config files", strings.Join(importConfigFilesTagFlag, ", ")).*/
+			/*Msg("")	*/
+		/*//*/
+
+		/*data := ext.TagData{*/
+			/*ConfigFile:  configFileTagFlag,*/
+			/*Program:     programTagFlag,*/
+			/*ProgramArgs: programArgsTagFlag,*/
+			/*ImportConfigFiles: importConfigFilesTagFlag,*/
+		/*}*/
+		/*if err := data.Write(tagName); err != nil {*/
+			/*log.Error().Err(err).Msg("タグファイルの書き込みに失敗しました")*/
+			/*os.Exit(1)*/
+		/*}*/
+		/*fmt.Println("Tag added:", tagName)*/
+
+/*}*/
+
+
+/*func read(args[] string){*/
+	/*tagName := args[0]*/
+		/*data, err := ext.ReadTagData(tagName)*/
+		/*if err != nil {*/
+/*log.Error().Err(err).Msg("タグファイルの読み込みに失敗しました")*/
+			/*os.Exit(1)*/
+		/*}*/
+		/*fmt.Printf("Tag: %s\n  Config: %s\n  Program: %s\n  Args: %v\n  Import config files: %v\n",*/
+			/*tagName, data.ConfigFile, data.Program, data.ProgramArgs,data.ImportConfigFiles)*/
+
+/*}*/
+
+
+/*func list(args[] string){*/
+	/*homeDir, err := os.UserHomeDir()*/
+		/*if homeDir == "" {*/
+			/*log.Error().Err(err).Msg(fmt.Sprintf("homeDir(%s)が設定されていません", homeDir))*/
+			/*os.Exit(1)*/
+		/*}*/
+		/*tagDir := filepath.Join(homeDir, ext.DEFAULT_TAG_DIR)*/
+		/*fileLists, err := general.GetFilesWithExtension(tagDir, ".tag")*/
+		/*if err != nil {*/
+			/*log.Error().Err(err).Msg("タグファイルが見つかりませんでした")*/
+			/*os.Exit(1)*/
+		/*}*/
+		/*fmt.Printf("-- current tag lists  --\n")*/
+		/*fmt.Printf("%s\n", strings.Join(fileLists, "\n"))*/
+/*}*/
+
+/*func remove(args[] string){*/
+	/*tagName := args[0]*/
+		/*homeDir, err := os.UserHomeDir()*/
+		/*if homeDir == "" {*/
+			/*log.Error().Err(err).Msg(fmt.Sprintf("homeDir(%s)が設定されていません", homeDir))*/
+			/*os.Exit(1)*/
+		/*}*/
+		/*tagDir := filepath.Join(homeDir, ext.DEFAULT_TAG_DIR)*/
+		/*tagPath := filepath.Join(tagDir, fmt.Sprintf("%s.tag", tagName))*/
+		/*err = os.Remove(tagPath)*/
+		/*if err != nil {*/
+			/*log.Error().Err(err).Msg(fmt.Sprintf("タグ名: %sの削除に失敗しました", tagName))*/
+			/*os.Exit(1)*/
+		/*}*/
+		/*fmt.Printf("タグ名: %sを削除しました\n", tagName)*/
+	
+		/*fileLists, err := general.GetFilesWithExtension(tagDir, ".tag")*/
+		/*if err != nil {*/
+			/*log.Error().Err(err).Msg("タグファイルが見つかりませんでした")*/
+			/*os.Exit(1)*/
+		/*}*/
+		/*fmt.Printf("-- current tag lists  --\n")*/
+		/*fmt.Printf("%s\n", strings.Join(fileLists, "\n"))*/
+
+/*}*/
+
+
