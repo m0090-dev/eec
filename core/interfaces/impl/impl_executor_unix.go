@@ -14,6 +14,11 @@ import (
 // DefaultExecutor uses os/exec
 type DefaultExecutor struct{}
 
+func (d DefaultExecutor) Executable() (string, error) {
+	return os.Executable()
+}
+
+
 
 func (d DefaultExecutor) StartProcess(path string, args []string, env []string, stdin, stdout, stderr *os.File,hideWindow bool) (*exec.Cmd, error) {
 	var cmd *exec.Cmd

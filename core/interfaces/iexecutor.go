@@ -13,5 +13,6 @@ type Executor interface {
 	Getpid() int
        /* StartProcessWithCmd(path string, args []string, env []string, stdin, stdout, stderr *os.File, hideWindow bool) (pid int, proc *os.Process, cmd *exec.Cmd, err error)*/
 	FindProcess(pid int) (*os.Process,error)
+	Executable() (string,error)
 }
 

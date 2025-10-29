@@ -27,6 +27,7 @@ import (
 	"strings"
 )
 
+const CREATE_NEW_CONSOLE = 0x00000010
 // Engine is the core library entrypoint. It contains pluggable implementations
 // for executing commands and file operations so CLI can inject mocks for tests.
 type Engine struct {
@@ -447,6 +448,8 @@ func (e *Engine) Restart() error {
 	e.Logger.Info().Msg("process restarted successfully")
 	return nil
 }
+
+
 
 func (e *Engine) TagRemove(name string) error {
 	tagName := name
