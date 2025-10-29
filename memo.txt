@@ -559,3 +559,189 @@ func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
 /*}*/
 
 
+
+/*func (c *Config) ApplyEnvs() error {*/
+
+/*// -- OSごとの区切り文字分岐 --*/
+/*var separator string*/
+/*if runtime.GOOS == "windows" {*/
+/*separator = ";" // Windowsではセミコロン*/
+/*} else {*/
+/*separator = ":" // Unix/Linux/macOSではコロン*/
+/*}*/
+
+/*currentPaths := strings.Split(os.Getenv("PATH"), separator)*/
+/*for _, env := range c.Envs {*/
+/*key := env.Key*/
+/*if key == "" {*/
+/*log.Warn().Interface("env", env).Msg("envのキーが空です")*/
+/*continue*/
+/*}*/
+
+/*switch val := env.Value.(type) {*/
+/*case string:*/
+/*// スカラー文字列*/
+/*expanded := utils.ExpandEnvVariables(val)*/
+/*os.Setenv(key, expanded)*/
+
+/*case []interface{}:*/
+/*// 文字列の配列（interface{}スライス）*/
+/*strVals := make([]string, 0, len(val))*/
+/*for _, v := range val {*/
+/*if s, ok := v.(string); ok {*/
+/*strVals = append(strVals, utils.ExpandEnvVariables(s))*/
+/*} else {*/
+/*log.Warn().*/
+/*Str("key", key).*/
+/*Interface("element", v).*/
+/*Msg("env配列の要素が文字列でない")*/
+/*}*/
+/*}*/
+
+/*if strings.EqualFold(key, "Path") {*/
+/*configPaths := strings.Join(strVals, separator)*/
+/*newPaths := append(currentPaths, configPaths)*/
+/*os.Setenv(key, strings.Join(newPaths, separator))*/
+/*} else {*/
+
+/*os.Setenv(key, strings.Join(strVals, separator))*/
+/*}*/
+/*default:*/
+/*log.Warn().*/
+/*Str("key", key).*/
+/*Interface("value", env.Value).*/
+/*Msg("envの値の型が未対応")*/
+/*}*/
+/*}*/
+
+/*return nil*/
+/*}*/
+
+/*func (c *Config) BuildEnvs(baseEnv []string) []string {*/
+/*envMap := make(map[string]string)*/
+
+/*// baseEnv を map に変換*/
+/*for _, e := range baseEnv {*/
+/*parts := strings.SplitN(e, "=", 2)*/
+/*if len(parts) == 2 {*/
+/*envMap[strings.ToUpper(parts[0])] = parts[1]*/
+/*}*/
+/*}*/
+
+/*separator := ";"*/
+/*if runtime.GOOS != "windows" {*/
+/*separator = ":"*/
+/*}*/
+
+/*for _, env := range c.Envs {*/
+/*key := env.Key*/
+/*if key == "" {*/
+/*log.Warn().Interface("env", env).Msg("envのキーが空です")*/
+/*continue*/
+/*}*/
+
+/*keyUpper := strings.ToUpper(key)*/
+
+/*switch val := env.Value.(type) {*/
+/*case string:*/
+/*envMap[keyUpper] = utils.ExpandEnvVariables(val)*/
+
+/*case []interface{}:*/
+/*strVals := make([]string, 0, len(val))*/
+/*for _, v := range val {*/
+/*if s, ok := v.(string); ok {*/
+/*strVals = append(strVals, utils.ExpandEnvVariables(s))*/
+/*}*/
+/*}*/
+
+/*if keyUpper == "PATH" {*/
+/*basePaths := []string{}*/
+/*if existing, ok := envMap["PATH"]; ok {*/
+/*basePaths = strings.Split(existing, separator)*/
+/*}*/
+/*// merged := append(basePaths, strVals...)*/
+/*merged := append(strVals, basePaths...)*/
+/*envMap["PATH"] = strings.Join(merged, separator)*/
+/*} else {*/
+/*envMap[keyUpper] = strings.Join(strVals, separator)*/
+/*}*/
+/*}*/
+/*}*/
+
+/*// map を []string に戻す*/
+/*newEnv := make([]string, 0, len(envMap))*/
+/*for k, v := range envMap {*/
+/*newEnv = append(newEnv, k+"="+v)*/
+/*}*/
+
+/*return newEnv*/
+/*}*/
+
+/*func (c *Config) ApplyEnvs() error {*/
+	/*// OSごとの区切り文字*/
+	/*separator := ";"*/
+	/*if runtime.GOOS != "windows" {*/
+		/*separator = ":"*/
+	/*}*/
+
+	/*// 現在の環境を map に変換して重複チェック用*/
+	/*envMap := make(map[string]map[string]struct{})*/
+	/*for _, e := range os.Environ() {*/
+		/*parts := strings.SplitN(e, "=", 2)*/
+		/*if len(parts) != 2 {*/
+			/*continue*/
+		/*}*/
+		/*key := strings.ToUpper(parts[0])*/
+		/*val := parts[1]*/
+		/*if _, ok := envMap[key]; !ok {*/
+			/*envMap[key] = make(map[string]struct{})*/
+		/*}*/
+		/*envMap[key][val] = struct{}{}*/
+	/*}*/
+
+	/*for _, env := range c.Envs {*/
+		/*key := strings.ToUpper(env.Key)*/
+		/*if key == "" {*/
+			/*log.Warn().Interface("env", env).Msg("envのキーが空です")*/
+			/*continue*/
+		/*}*/
+
+		/*// string でも []interface{} でも統一して処理*/
+		/*var strVals []string*/
+		/*switch val := env.Value.(type) {*/
+		/*case string:*/
+			/*strVals = []string{general.ExpandEnvVariables(val)}*/
+		/*case []interface{}:*/
+			/*for _, v := range val {*/
+				/*if s, ok := v.(string); ok {*/
+					/*strVals = append(strVals, general.ExpandEnvVariables(s))*/
+				/*}*/
+			/*}*/
+		/*default:*/
+			/*log.Warn().Str("key", key).Interface("value", env.Value).Msg("envの値の型が未対応")*/
+			/*continue*/
+		/*}*/
+
+		/*// 重複チェック用 map 初期化*/
+		/*if _, ok := envMap[key]; !ok {*/
+			/*envMap[key] = make(map[string]struct{})*/
+		/*}*/
+
+		/*// 重複しない値だけ追加*/
+		/*for _, v := range strVals {*/
+			/*if _, exists := envMap[key][v]; !exists {*/
+				/*envMap[key][v] = struct{}{}*/
+			/*}*/
+		/*}*/
+
+		/*// マップから文字列スライスに変換してセット*/
+		/*newVals := make([]string, 0, len(envMap[key]))*/
+		/*for val := range envMap[key] {*/
+			/*newVals = append(newVals, val)*/
+		/*}*/
+		/*os.Setenv(key, strings.Join(newVals, separator))*/
+	/*}*/
+
+	/*return nil*/
+/*}*/
+

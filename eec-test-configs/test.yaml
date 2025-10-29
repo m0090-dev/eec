@@ -1,3 +1,5 @@
+configs:
+  - description: "テスト設定ファイル(YAML)"
 envs:
   - key: PATH
     value:
