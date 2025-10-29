@@ -14,7 +14,7 @@ import (
 )
 
 // ReadOrFallback is the same helper behavior as original core.
-func ReadOrFallback(os types.OS,logger interfaces.Logger,name string) (types.Config, error) {
+func ReadOrFallback(opts types.RunOptions,os types.OS,logger interfaces.Logger,name string) (types.Config, error) {
 	var cfg types.Config
 	if os.FS.FileExists(name) {
 		return types.ReadConfig(os,logger,name)
@@ -30,7 +30,7 @@ func ReadOrFallback(os types.OS,logger interfaces.Logger,name string) (types.Con
 		} else {
 			fcfg, _ = types.ReadInlineConfig(os,logger,f)
 		}
-		fcfg.ApplyEnvs(os,logger)
+		fcfg.ApplyEnvs(os,logger,opts.Separator)
 		cfg = fcfg
 	}
 	return cfg, nil

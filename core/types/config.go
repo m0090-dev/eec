@@ -20,8 +20,8 @@ type Config struct {
 	Program ProgramData  `toml:"program" yaml:"program" json:"program"`
 }
 type MetaConfig struct {
-	Separator string `toml:"separator" yaml:"separator" json:"separator"`
-	Description     string `toml:"description" yaml:"description" json:"description"`
+	Separator   string `toml:"separator" yaml:"separator" json:"separator"`
+	Description string `toml:"description" yaml:"description" json:"description"`
 }
 type ProgramData struct {
 	Path string   `toml:"path" yaml:"path" json:"path"`
@@ -140,31 +140,26 @@ func ReadInlineYaml(os OS, logger interfaces.Logger, yamlData string) (Config, e
 
 }
 
-func (c *Config) ApplyEnvs(os OS, logger interfaces.Logger) error {
-	/*
-		// OSごとの区切り文字
-		separator := ";"
-		if runtime.GOOS != "windows" {
-			separator = ":"
-		}
-		for _,cfgs :=  range c.Configs{
-			if cfgs.Separator != "" {
-				separator = cfgs.Separator
-			}
-		}
-	*/
+func (c *Config) ApplyEnvs(os OS, logger interfaces.Logger, separator string) error {
 
-	separator := ""
+	// まず Description を必ず出力
 	for _, cfgs := range c.Configs {
-		if cfgs.Separator != "" {
-			separator = cfgs.Separator
-			break
-		}
-		if cfgs.Description != ""{
-			logger.Debug().Str("Config Description",cfgs.Description).Msg("")
-			break
+		if cfgs.Description != "" {
+			logger.Debug().Str("Config Description", cfgs.Description).Msg("")
 		}
 	}
+
+	// セパレータ決定
+	if separator == "" { // CLI未指定の場合のみ Config の Separator を使う
+		for _, cfgs := range c.Configs {
+			if cfgs.Separator != "" {
+				separator = cfgs.Separator
+				break
+			}
+		}
+	}
+
+	// CLIでもConfigでも未指定なら OS デフォルト
 	if separator == "" {
 		if runtime.GOOS == "windows" {
 			separator = ";"
@@ -245,32 +240,26 @@ func (c *Config) ApplyEnvs(os OS, logger interfaces.Logger) error {
 	return nil
 }
 
-func (c *Config) BuildEnvs(os OS, logger interfaces.Logger, baseEnv []string) []string {
-	envMap := make(map[string][]string)
-	/*
-		separator := ";"
-		if runtime.GOOS != "windows" {
-			separator = ":"
-		}
-		for _,cfgs :=  range c.Configs{
-		  	if cfgs.Separator != "" {
-		    	  	separator = cfgs.Separator
-		  	}
-		}
-	*/
+func (c *Config) BuildEnvs(os OS, logger interfaces.Logger, baseEnv []string, separator string) []string {
 
-	separator := ""
+	// まず Description を必ず出力
 	for _, cfgs := range c.Configs {
-		if cfgs.Separator != "" {
-			separator = cfgs.Separator
-			break
+		if cfgs.Description != "" {
+			logger.Debug().Str("Config Description", cfgs.Description).Msg("")
 		}
-		if cfgs.Description != ""{
-			logger.Debug().Str("Config Description",cfgs.Description).Msg("")
-			break
-		}
-
 	}
+
+	// セパレータ決定
+	if separator == "" { // CLI未指定の場合のみ Config の Separator を使う
+		for _, cfgs := range c.Configs {
+			if cfgs.Separator != "" {
+				separator = cfgs.Separator
+				break
+			}
+		}
+	}
+
+	// CLIでもConfigでも未指定なら OS デフォルト
 	if separator == "" {
 		if runtime.GOOS == "windows" {
 			separator = ";"
@@ -278,6 +267,8 @@ func (c *Config) BuildEnvs(os OS, logger interfaces.Logger, baseEnv []string) []
 			separator = ":"
 		}
 	}
+
+	envMap := make(map[string][]string)
 
 	// baseEnv を map に変換（複数同キーをスライスに格納）
 	for _, e := range baseEnv {

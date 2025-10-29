@@ -35,14 +35,14 @@ func ResolveRunOptions(opts types.RunOptions, tagData types.TagData, config type
 
     // opts で指定された imports
     for _, imp := range opts.Imports {
-        if cfg, err := ReadOrFallback(os, logger, imp); err == nil {
+        if cfg, err := ReadOrFallback(opts,os, logger, imp); err == nil {
             allConfigs = append(allConfigs, cfg)
         }
     }
 
     // タグで指定された imports
     for _, imp := range tagData.ImportConfigFiles {
-        if cfg, err := ReadOrFallback(os, logger, imp); err == nil {
+        if cfg, err := ReadOrFallback(opts,os, logger, imp); err == nil {
             allConfigs = append(allConfigs, cfg)
         }
     }
@@ -53,7 +53,7 @@ func ResolveRunOptions(opts types.RunOptions, tagData types.TagData, config type
     // 現在の環境変数をベースにマージ
     finalEnv = os.Env.Environ()
     for _, cfg := range allConfigs {
-        finalEnv = cfg.BuildEnvs(os, logger, finalEnv)
+        finalEnv = cfg.BuildEnvs(os, logger, finalEnv,opts.Separator)
     }
 
     return

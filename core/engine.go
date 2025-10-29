@@ -185,23 +185,14 @@ func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(tempData); err != nil {
 		tmpFile.Close()
-		if !opts.Pty {
-			_ = cmd.Process.Kill()
-		}
 		return fmt.Errorf("failed to encode temp data: %w", err)
 	}
 	if _, err := tmpFile.Write(buf.Bytes()); err != nil {
 		tmpFile.Close()
-		if !opts.Pty {
-			_ = cmd.Process.Kill()
-		}
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}
 	if err := tmpFile.Sync(); err != nil {
 		tmpFile.Close()
-		if !opts.Pty {
-			_ = cmd.Process.Kill()
-		}
 		return fmt.Errorf("failed to flush temp file: %w", err)
 	}
 	if err := tmpFile.Close(); err != nil {
@@ -403,7 +394,7 @@ func (e *Engine) Restart() error {
 		return fmt.Errorf("failed to decode temp data: %w", err)
 	}
 
-	// 5. 既存プロセス終了（PTY の場合は Kill をスキップ）
+	// 5. 既存プロセス終了
 	if td.ChildPID != 0 {
 		running, err := domain.IsPIDRunning(e.OS, e.Logger, td.ChildPID)
 		if err != nil {

@@ -13,7 +13,8 @@ type RunOptions struct {
 	HideWindow        bool
 	DeleterPath       string
 	DeleterHideWindow bool
-	Pty		  bool
+	Separator	  string
 }
+
 
 

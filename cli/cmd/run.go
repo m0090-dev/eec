@@ -24,6 +24,7 @@ var waitTimeoutRunFlag int
 var HideWindowRunFlag bool
 var deleterPathRunFlag string
 var DeleterHideWindowRunFlag bool
+var SeparatorRunFlag string
 
 func run() {
 	e := core.NewEngine(nil, nil)
@@ -37,6 +38,7 @@ func run() {
 		HideWindow:        HideWindowRunFlag,
 		DeleterPath:       deleterPathRunFlag,
 		DeleterHideWindow: DeleterHideWindowRunFlag,
+		Separator: SeparatorRunFlag,
 	}
 	if err := e.Run(context.Background(), opts); err != nil {
 		log.Fatal().Err(err).Msg("Failed to run")
@@ -83,7 +85,8 @@ func init() {
 	runCmd.Flags().StringVar(&deleterPathRunFlag, "deleter-path", "", "Deleter path")
 	
 	runCmd.Flags().BoolVarP(&DeleterHideWindowRunFlag, "deleter-hide-window", "", false, "hide the console window when runnning  deleter")
-
+	
+	runCmd.Flags().StringVarP(&SeparatorRunFlag,"separator","s","","Separator Value")
 
 
 	rootCmd.AddCommand(runCmd)

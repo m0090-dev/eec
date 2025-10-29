@@ -745,3 +745,39 @@ func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
 	/*return nil*/
 /*}*/
 
+
+	/*
+		// OSごとの区切り文字
+		separator := ";"
+		if runtime.GOOS != "windows" {
+			separator = ":"
+		}
+		for _,cfgs :=  range c.Configs{
+			if cfgs.Separator != "" {
+				separator = cfgs.Separator
+			}
+		}
+	*/
+
+	//separator := ""
+	/*
+	for _, cfgs := range c.Configs {
+		if cfgs.Separator != "" {
+			separator = cfgs.Separator
+			break
+		}
+		if cfgs.Description != ""{
+			logger.Debug().Str("Config Description",cfgs.Description).Msg("")
+			break
+		}
+	}
+	if separator == "" {
+		if runtime.GOOS == "windows" {
+			separator = ";"
+		} else {
+			separator = ":"
+		}
+	}
+	*/
+
+
