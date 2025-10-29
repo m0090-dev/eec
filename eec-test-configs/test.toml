@@ -1,6 +1,5 @@
-#[[configs]]
-#separator = "|"
-
+[[configs]]
+description = "テスト設定ファイル(TOML)"
 [[envs]]
 key = "PATH"
 value = [

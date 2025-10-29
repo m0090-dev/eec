@@ -1,4 +1,9 @@
 {
+  "configs": [
+	{
+  		"description":  "テスト設定ファイル(JSON)"
+	}
+  ],
   "envs": [
     {
       "key": "PATH",
