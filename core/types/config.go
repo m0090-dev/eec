@@ -1,11 +1,11 @@
 package types
 
 import (
-	"github.com/google/uuid"
-	"github.com/m0090-dev/eec-go/core/utils/general"
-	"github.com/m0090-dev/eec-go/core/interfaces"
-	"github.com/pelletier/go-toml/v2"
 	"encoding/json"
+	"github.com/google/uuid"
+	"github.com/m0090-dev/eec-go/core/interfaces"
+	"github.com/m0090-dev/eec-go/core/utils/general"
+	"github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v3"
 	//"github.com/rs/zerolog/log"
 	// "os"
@@ -15,8 +15,13 @@ import (
 )
 
 type Config struct {
-	Envs    []Environ   `toml:"envs" yaml:"envs" json:"envs"`
-	Program ProgramData `toml:"program" taml:"program" json:"program"`
+	Configs []MetaConfig `toml:"configs" yaml:"configs" json:"configs"`
+	Envs    []Environ    `toml:"envs" yaml:"envs" json:"envs"`
+	Program ProgramData  `toml:"program" yaml:"program" json:"program"`
+}
+type MetaConfig struct {
+	Separator   string `toml:"separator" yaml:"separator" json:"separator"`
+	Description string `toml:"description" yaml:"description" json:"description"`
 }
 type ProgramData struct {
 	Path string   `toml:"path" yaml:"path" json:"path"`
@@ -27,30 +32,30 @@ type Environ struct {
 	Value interface{} `toml:"value" yaml:"value" json:"value"`
 }
 
-func ReadConfig(os OS,logger interfaces.Logger,fileName string) (Config, error) {
+func ReadConfig(os OS, logger interfaces.Logger, fileName string) (Config, error) {
 	ext := general.FileExt(fileName)
 	if ext == ".toml" {
-		return ReadToml(os,logger,fileName)
+		return ReadToml(os, logger, fileName)
 	} else if ext == ".yaml" || ext == ".yml" {
-		return ReadYaml(os,logger,fileName)
+		return ReadYaml(os, logger, fileName)
 	} else if ext == ".json" {
-		return ReadJson(os,logger,fileName)
+		return ReadJson(os, logger, fileName)
 	}
 	return Config{}, nil
 }
-func ReadInlineConfig(os OS,logger interfaces.Logger,fileName string) (Config, error) {
+func ReadInlineConfig(os OS, logger interfaces.Logger, fileName string) (Config, error) {
 	ext := os.FS.FileExt(fileName)
 	if ext == ".toml" {
-		return ReadInlineToml(os,logger,fileName)
+		return ReadInlineToml(os, logger, fileName)
 	} else if ext == ".yaml" || ext == ".yml" {
-		return ReadInlineYaml(os,logger,fileName)
+		return ReadInlineYaml(os, logger, fileName)
 	} else if ext == ".json" {
-		return ReadInlineJson(os,logger,fileName)
+		return ReadInlineJson(os, logger, fileName)
 	}
 	return Config{}, nil
 }
 
-func ReadJson(os OS,logger interfaces.Logger,fileName string) (Config, error) {
+func ReadJson(os OS, logger interfaces.Logger, fileName string) (Config, error) {
 	data, err := os.FS.ReadFile(fileName)
 	if err != nil {
 		return Config{}, err
@@ -61,7 +66,7 @@ func ReadJson(os OS,logger interfaces.Logger,fileName string) (Config, error) {
 	return config, err
 
 }
-func ReadYaml(os OS,logger interfaces.Logger,fileName string) (Config, error) {
+func ReadYaml(os OS, logger interfaces.Logger, fileName string) (Config, error) {
 	data, err := os.FS.ReadFile(fileName)
 	if err != nil {
 		return Config{}, err
@@ -73,7 +78,7 @@ func ReadYaml(os OS,logger interfaces.Logger,fileName string) (Config, error) {
 
 }
 
-func ReadToml(os OS,logger interfaces.Logger,fileName string) (Config, error) {
+func ReadToml(os OS, logger interfaces.Logger, fileName string) (Config, error) {
 	data, err := os.FS.ReadFile(fileName)
 	if err != nil {
 		return Config{}, err
@@ -84,7 +89,7 @@ func ReadToml(os OS,logger interfaces.Logger,fileName string) (Config, error) {
 	return config, err
 }
 
-func ReadInlineToml(os OS,logger interfaces.Logger,tomlData string) (Config, error) {
+func ReadInlineToml(os OS, logger interfaces.Logger, tomlData string) (Config, error) {
 	// UUID を使って一時ファイル名を生成
 	tmpFileName := filepath.Join(os.FS.TempDir(), "inline-"+uuid.NewString()+".toml")
 
@@ -98,9 +103,9 @@ func ReadInlineToml(os OS,logger interfaces.Logger,tomlData string) (Config, err
 	defer os.FS.Remove(tmpFileName)
 
 	// 通常の読み込み処理を使う
-	return ReadToml(os,logger,tmpFileName)
+	return ReadToml(os, logger, tmpFileName)
 }
-func ReadInlineJson(os OS,logger interfaces.Logger,jsonData string) (Config, error) {
+func ReadInlineJson(os OS, logger interfaces.Logger, jsonData string) (Config, error) {
 	// UUID を使って一時ファイル名を生成
 	tmpFileName := filepath.Join(os.FS.TempDir(), "inline-"+uuid.NewString()+".json")
 
@@ -114,10 +119,10 @@ func ReadInlineJson(os OS,logger interfaces.Logger,jsonData string) (Config, err
 	defer os.FS.Remove(tmpFileName)
 
 	// 通常の読み込み処理を使う
-	return ReadJson(os,logger,tmpFileName)
+	return ReadJson(os, logger, tmpFileName)
 
 }
-func ReadInlineYaml(os OS,logger interfaces.Logger,yamlData string) (Config, error) {
+func ReadInlineYaml(os OS, logger interfaces.Logger, yamlData string) (Config, error) {
 	// UUID を使って一時ファイル名を生成
 	tmpFileName := filepath.Join(os.FS.TempDir(), "inline-"+uuid.NewString()+".yaml")
 
@@ -131,201 +136,36 @@ func ReadInlineYaml(os OS,logger interfaces.Logger,yamlData string) (Config, err
 	defer os.FS.Remove(tmpFileName)
 
 	// 通常の読み込み処理を使う
-	return ReadYaml(os,logger,tmpFileName)
+	return ReadYaml(os, logger, tmpFileName)
 
 }
 
-/*func (c *Config) ApplyEnvs() error {*/
+func (c *Config) ApplyEnvs(os OS, logger interfaces.Logger, separator string) error {
 
-/*// -- OSごとの区切り文字分岐 --*/
-/*var separator string*/
-/*if runtime.GOOS == "windows" {*/
-/*separator = ";" // Windowsではセミコロン*/
-/*} else {*/
-/*separator = ":" // Unix/Linux/macOSではコロン*/
-/*}*/
+	// まず Description を必ず出力
+	for _, cfgs := range c.Configs {
+		if cfgs.Description != "" {
+			logger.Debug().Str("Config Description", cfgs.Description).Msg("")
+		}
+	}
 
-/*currentPaths := strings.Split(os.Getenv("PATH"), separator)*/
-/*for _, env := range c.Envs {*/
-/*key := env.Key*/
-/*if key == "" {*/
-/*log.Warn().Interface("env", env).Msg("envのキーが空です")*/
-/*continue*/
-/*}*/
+	// セパレータ決定
+	if separator == "" { // CLI未指定の場合のみ Config の Separator を使う
+		for _, cfgs := range c.Configs {
+			if cfgs.Separator != "" {
+				separator = cfgs.Separator
+				break
+			}
+		}
+	}
 
-/*switch val := env.Value.(type) {*/
-/*case string:*/
-/*// スカラー文字列*/
-/*expanded := utils.ExpandEnvVariables(val)*/
-/*os.Setenv(key, expanded)*/
-
-/*case []interface{}:*/
-/*// 文字列の配列（interface{}スライス）*/
-/*strVals := make([]string, 0, len(val))*/
-/*for _, v := range val {*/
-/*if s, ok := v.(string); ok {*/
-/*strVals = append(strVals, utils.ExpandEnvVariables(s))*/
-/*} else {*/
-/*log.Warn().*/
-/*Str("key", key).*/
-/*Interface("element", v).*/
-/*Msg("env配列の要素が文字列でない")*/
-/*}*/
-/*}*/
-
-/*if strings.EqualFold(key, "Path") {*/
-/*configPaths := strings.Join(strVals, separator)*/
-/*newPaths := append(currentPaths, configPaths)*/
-/*os.Setenv(key, strings.Join(newPaths, separator))*/
-/*} else {*/
-
-/*os.Setenv(key, strings.Join(strVals, separator))*/
-/*}*/
-/*default:*/
-/*log.Warn().*/
-/*Str("key", key).*/
-/*Interface("value", env.Value).*/
-/*Msg("envの値の型が未対応")*/
-/*}*/
-/*}*/
-
-/*return nil*/
-/*}*/
-
-/*func (c *Config) BuildEnvs(baseEnv []string) []string {*/
-/*envMap := make(map[string]string)*/
-
-/*// baseEnv を map に変換*/
-/*for _, e := range baseEnv {*/
-/*parts := strings.SplitN(e, "=", 2)*/
-/*if len(parts) == 2 {*/
-/*envMap[strings.ToUpper(parts[0])] = parts[1]*/
-/*}*/
-/*}*/
-
-/*separator := ";"*/
-/*if runtime.GOOS != "windows" {*/
-/*separator = ":"*/
-/*}*/
-
-/*for _, env := range c.Envs {*/
-/*key := env.Key*/
-/*if key == "" {*/
-/*log.Warn().Interface("env", env).Msg("envのキーが空です")*/
-/*continue*/
-/*}*/
-
-/*keyUpper := strings.ToUpper(key)*/
-
-/*switch val := env.Value.(type) {*/
-/*case string:*/
-/*envMap[keyUpper] = utils.ExpandEnvVariables(val)*/
-
-/*case []interface{}:*/
-/*strVals := make([]string, 0, len(val))*/
-/*for _, v := range val {*/
-/*if s, ok := v.(string); ok {*/
-/*strVals = append(strVals, utils.ExpandEnvVariables(s))*/
-/*}*/
-/*}*/
-
-/*if keyUpper == "PATH" {*/
-/*basePaths := []string{}*/
-/*if existing, ok := envMap["PATH"]; ok {*/
-/*basePaths = strings.Split(existing, separator)*/
-/*}*/
-/*// merged := append(basePaths, strVals...)*/
-/*merged := append(strVals, basePaths...)*/
-/*envMap["PATH"] = strings.Join(merged, separator)*/
-/*} else {*/
-/*envMap[keyUpper] = strings.Join(strVals, separator)*/
-/*}*/
-/*}*/
-/*}*/
-
-/*// map を []string に戻す*/
-/*newEnv := make([]string, 0, len(envMap))*/
-/*for k, v := range envMap {*/
-/*newEnv = append(newEnv, k+"="+v)*/
-/*}*/
-
-/*return newEnv*/
-/*}*/
-
-/*func (c *Config) ApplyEnvs() error {*/
-	/*// OSごとの区切り文字*/
-	/*separator := ";"*/
-	/*if runtime.GOOS != "windows" {*/
-		/*separator = ":"*/
-	/*}*/
-
-	/*// 現在の環境を map に変換して重複チェック用*/
-	/*envMap := make(map[string]map[string]struct{})*/
-	/*for _, e := range os.Environ() {*/
-		/*parts := strings.SplitN(e, "=", 2)*/
-		/*if len(parts) != 2 {*/
-			/*continue*/
-		/*}*/
-		/*key := strings.ToUpper(parts[0])*/
-		/*val := parts[1]*/
-		/*if _, ok := envMap[key]; !ok {*/
-			/*envMap[key] = make(map[string]struct{})*/
-		/*}*/
-		/*envMap[key][val] = struct{}{}*/
-	/*}*/
-
-	/*for _, env := range c.Envs {*/
-		/*key := strings.ToUpper(env.Key)*/
-		/*if key == "" {*/
-			/*log.Warn().Interface("env", env).Msg("envのキーが空です")*/
-			/*continue*/
-		/*}*/
-
-		/*// string でも []interface{} でも統一して処理*/
-		/*var strVals []string*/
-		/*switch val := env.Value.(type) {*/
-		/*case string:*/
-			/*strVals = []string{general.ExpandEnvVariables(val)}*/
-		/*case []interface{}:*/
-			/*for _, v := range val {*/
-				/*if s, ok := v.(string); ok {*/
-					/*strVals = append(strVals, general.ExpandEnvVariables(s))*/
-				/*}*/
-			/*}*/
-		/*default:*/
-			/*log.Warn().Str("key", key).Interface("value", env.Value).Msg("envの値の型が未対応")*/
-			/*continue*/
-		/*}*/
-
-		/*// 重複チェック用 map 初期化*/
-		/*if _, ok := envMap[key]; !ok {*/
-			/*envMap[key] = make(map[string]struct{})*/
-		/*}*/
-
-		/*// 重複しない値だけ追加*/
-		/*for _, v := range strVals {*/
-			/*if _, exists := envMap[key][v]; !exists {*/
-				/*envMap[key][v] = struct{}{}*/
-			/*}*/
-		/*}*/
-
-		/*// マップから文字列スライスに変換してセット*/
-		/*newVals := make([]string, 0, len(envMap[key]))*/
-		/*for val := range envMap[key] {*/
-			/*newVals = append(newVals, val)*/
-		/*}*/
-		/*os.Setenv(key, strings.Join(newVals, separator))*/
-	/*}*/
-
-	/*return nil*/
-/*}*/
-
-
-func (c *Config) ApplyEnvs(os OS,logger interfaces.Logger) error {
-	// OSごとの区切り文字
-	separator := ";"
-	if runtime.GOOS != "windows" {
-		separator = ":"
+	// CLIでもConfigでも未指定なら OS デフォルト
+	if separator == "" {
+		if runtime.GOOS == "windows" {
+			separator = ";"
+		} else {
+			separator = ":"
+		}
 	}
 
 	// 現在の環境を map に変換して重複チェック用
@@ -400,13 +240,35 @@ func (c *Config) ApplyEnvs(os OS,logger interfaces.Logger) error {
 	return nil
 }
 
+func (c *Config) BuildEnvs(os OS, logger interfaces.Logger, baseEnv []string, separator string) []string {
 
-func (c *Config) BuildEnvs(os OS,logger interfaces.Logger,baseEnv []string) []string {
-	envMap := make(map[string][]string)
-	separator := ";"
-	if runtime.GOOS != "windows" {
-		separator = ":"
+	// まず Description を必ず出力
+	for _, cfgs := range c.Configs {
+		if cfgs.Description != "" {
+			logger.Debug().Str("Config Description", cfgs.Description).Msg("")
+		}
 	}
+
+	// セパレータ決定
+	if separator == "" { // CLI未指定の場合のみ Config の Separator を使う
+		for _, cfgs := range c.Configs {
+			if cfgs.Separator != "" {
+				separator = cfgs.Separator
+				break
+			}
+		}
+	}
+
+	// CLIでもConfigでも未指定なら OS デフォルト
+	if separator == "" {
+		if runtime.GOOS == "windows" {
+			separator = ";"
+		} else {
+			separator = ":"
+		}
+	}
+
+	envMap := make(map[string][]string)
 
 	// baseEnv を map に変換（複数同キーをスライスに格納）
 	for _, e := range baseEnv {
