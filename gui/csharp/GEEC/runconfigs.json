@@ -1,0 +1,15 @@
+[
+  {
+    "Header": "\u69CB\u6210\u540D 1",
+    "Program": "Nvy",
+    "ConfigFile": null,
+    "Tag": "dev",
+    "WaitTimeout": 60000,
+    "ProgramArgs": [
+      "\u3042\u3042\u3042.txt",
+      "\u304B\u304B\u304B.txt"
+    ],
+    "Imports": [],
+    "HideWindow": true
+  }
+]

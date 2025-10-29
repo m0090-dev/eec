@@ -1,0 +1,28 @@
+
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="GEEC.MainWindow"
+        Title="GEEC"
+        Width="600" Height="400">
+  <DockPanel>
+    <!-- メニューバー -->
+    <Menu x:Name="MainMenu" DockPanel.Dock="Top">
+      <MenuItem Header="メニュー">
+        <MenuItem Header="Run構成作成" Click="RunConfig_Create_Click"/>
+        <MenuItem Header="タグ追加" Click="Tag_Add_Click"/>
+        <MenuItem Header="タグ削除" Click="Tag_Remove_Click"/>
+        <MenuItem Header="タグリスト" Click="Tag_List_Click"/>
+        <MenuItem Header="スクリプト生成" Click="GenScript_Click"/>
+        <MenuItem Header="終了" Click="Quit_Click"/>
+      </MenuItem>
+      <MenuItem Header="About..">
+      </MenuItem>
+    </Menu>
+    <!-- メインコンテンツ全体をスクロール可能に -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+      <StackPanel x:Name="RunConfigList" Margin="20" >
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+
+</Window>
