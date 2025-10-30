@@ -100,10 +100,10 @@ var removeTagCmd = &cobra.Command{
 
 func init() {
 	//addTagCmd.Flags().StringVar(&tagNameTagFlag, "name", "", "Tag name")
-	addTagCmd.Flags().StringVar(&configFileTagFlag, "config-file", "", "Config file")
-	addTagCmd.Flags().StringVar(&programTagFlag, "program", "", "Program name")
-	addTagCmd.Flags().StringSliceVar(&programArgsTagFlag, "program-args", []string{}, "Program args")
-	addTagCmd.Flags().StringSliceVar(&importConfigFilesTagFlag, "import", []string{}, "Import config files")
+	addTagCmd.Flags().StringVarP(&configFileTagFlag, "config-file","c", "", "Config file")
+	addTagCmd.Flags().StringVarP(&programTagFlag, "program","p", "", "Program name")
+	addTagCmd.Flags().StringSliceVarP(&programArgsTagFlag, "program-args","a", []string{}, "Program args")
+	addTagCmd.Flags().StringSliceVarP(&importConfigFilesTagFlag, "import","i", []string{}, "Import config files")
 
 	tagCmd.AddCommand(addTagCmd)
 	tagCmd.AddCommand(readTagCmd)
