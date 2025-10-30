@@ -21,6 +21,9 @@ func FileExists(path string) bool {
 func FileExt(path string) string {
 	return filepath.Ext(path)
 }
+func FileBase(path string) string{
+	return filepath.Base(path)
+}
 
 // AddExtension はファイル名に拡張子を付けます。
 // すでに拡張子が付いている場合は何もしません。

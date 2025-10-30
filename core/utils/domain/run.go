@@ -36,6 +36,50 @@ func ReadOrFallback(opts types.RunOptions,os types.OS,logger interfaces.Logger,n
 	return cfg, nil
 }
 
+func ReadOrFallbackRecursive(opts types.RunOptions, os types.OS, logger interfaces.Logger, name string) (types.Config, error) {
+    var cfg types.Config
+
+    // 1. ファイルとして存在する場合はそのまま読み込む
+    if os.FS.FileExists(name) {
+        return types.ReadConfig(os, logger, name)
+    }
+
+    // 2. タグデータとして読み込む
+    tagData, err := types.ReadTagData(os, logger, name)
+    if err != nil {
+        return cfg, err
+    }
+
+    // 3. import ファイルを再帰的に読み込む
+    for _, f := range tagData.ImportConfigFiles {
+        fcfg, err := ReadOrFallbackRecursive(opts, os, logger, f)
+        if err != nil {
+            logger.Warn().Str("import", f).Err(err).Msg("failed to read import config")
+            continue
+        }
+
+        // 4. 読み込んだ import の env を適用
+        fcfg.ApplyEnvs(os, logger, opts.Separator)
+
+        // 5. cfg に集約
+        cfg.Envs = append(cfg.Envs, fcfg.Envs...)
+
+        // Program.Path は未設定なら設定
+        if cfg.Program.Path == "" {
+            cfg.Program.Path = fcfg.Program.Path
+        }
+        // Program.Args は append
+        cfg.Program.Args = append(cfg.Program.Args, fcfg.Program.Args...)
+
+        // Configs も append
+        cfg.Configs = append(cfg.Configs, fcfg.Configs...)
+    }
+
+    return cfg, nil
+}
+
+
+
 func IsProcessRunning(os types.OS,logger interfaces.Logger,name string) (bool, error) {
 	switch runtime.GOOS {
 	case "windows":

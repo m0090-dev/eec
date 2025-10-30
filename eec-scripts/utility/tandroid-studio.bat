@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 setlocal enabledelayedexpansion
 
 REM Use the first argument as --program
@@ -18,4 +19,4 @@ shift
 goto loop
 
 :run
-eec run --deleter-hide-window --hide-window --tag android-studio
+eec run --deleter-hide-window --hide-window --tag android-studio --program %PROGRAM% 

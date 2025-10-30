@@ -10,6 +10,7 @@ type FS interface {
 	ReadFile(name string) ([]byte,error)
 	Remove(name string)error
 	FileExt(path string) string
+	FileBase(path string) string
 	Open(name string) (*os.File,error)
 }
 

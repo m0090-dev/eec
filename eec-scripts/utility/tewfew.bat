@@ -19,4 +19,4 @@ shift
 goto loop
 
 :run
-eec run --deleter-hide-window --hide-window --tag cygwin-dev --program %PROGRAM% 
+eec run --deleter-hide-window --hide-window --tag ewfew --program %PROGRAM% 

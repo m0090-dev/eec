@@ -9,6 +9,8 @@ import (
 	"gopkg.in/yaml.v3"
 	//"github.com/rs/zerolog/log"
 	// "os"
+	//"fmt"
+	"github.com/joho/godotenv"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -40,6 +42,8 @@ func ReadConfig(os OS, logger interfaces.Logger, fileName string) (Config, error
 		return ReadYaml(os, logger, fileName)
 	} else if ext == ".json" {
 		return ReadJson(os, logger, fileName)
+	} else if ext == ".env"{
+		return ReadEnv(os, logger, fileName)
 	}
 	return Config{}, nil
 }
@@ -87,6 +91,26 @@ func ReadToml(os OS, logger interfaces.Logger, fileName string) (Config, error) 
 	var config Config
 	err = toml.Unmarshal(data, &config)
 	return config, err
+}
+
+func ReadEnv(os OS, logger interfaces.Logger, fileName string) (Config, error) {
+    var config Config
+    var envMap map[string]string
+    var err error
+    envMap, err = godotenv.Read(fileName)
+    if err != nil {
+        logger.Fatal().Err(err).Msg("Error reading .env file")
+    }
+
+    config.Envs = make([]Environ, 0, len(envMap))
+    for key, value := range envMap {
+        config.Envs = append(config.Envs, Environ{
+            Key:   key,
+            Value: value,
+        })
+    }
+
+    return config, nil
 }
 
 func ReadInlineToml(os OS, logger interfaces.Logger, tomlData string) (Config, error) {

@@ -14,4 +14,4 @@ func (OSFS) ReadFile(name string) ([]byte,error) {return os.ReadFile(name)}
 func (OSFS) Remove(name string) error {return os.Remove(name)}
 func (OSFS) FileExt(path string) string {return general.FileExt(path)}
 func (OSFS) Open(name string) (*os.File,error) {return os.Open(name)}
-
+func (OSFS) FileBase(path string) string {return general.FileBase(path)}

@@ -228,7 +228,7 @@ func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
 // Gen performs generator-related core work (placeholder).
 func (e *Engine) GenScript() error {
 	domain.GenUtilsScript(e.OS, e.Logger)
-	domain.GenWrapScript(e.OS, e.Logger)
+	//domain.GenWrapScript(e.OS, e.Logger)
 	return nil
 }
 
