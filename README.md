@@ -140,29 +140,7 @@ Effect:
 
 ---
 
-### 8. repl
-Start an interactive mode for `eec`.
 
-Example:
-eec repl
-
-Effect:
-- Provides an interactive shell to repeatedly use `eec` features
-- Useful for exploration and frequent environment switching
-
----
-
-### 9. restart
-Restart a running environment.
-
-Example:
-eec restart
-
-Effect:
-- Stops and restarts
-- Relies on the **background utility `eec-deleter`** for proper state management and cleanup
-
----
 
 ## Purpose
 

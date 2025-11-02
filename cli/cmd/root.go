@@ -17,7 +17,7 @@ var rootCmd = &cobra.Command{
 	Short: "Environment Execution Controller — run isolated environments safely",
 	Long: `eec (env-exec) is a Go-based Environment Execution Controller.
 
-It allows you to safely manage and execute environments defined in TOML, YAML, or JSON
+It allows you to safely manage and execute environments defined in TOML, YAML,JSON or .env
 configuration files without polluting your system environment.
 
 With eec, you can:
