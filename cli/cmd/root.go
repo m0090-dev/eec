@@ -14,17 +14,31 @@ import (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "eec",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "Environment Execution Controller — run isolated environments safely",
+	Long: `eec (env-exec) is a Go-based Environment Execution Controller.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+It allows you to safely manage and execute environments defined in TOML, YAML, or JSON
+configuration files without polluting your system environment.
+
+With eec, you can:
+  • Run programs within temporary, isolated environments
+  • Group multiple configurations under tags for easy access
+  • Generate utility scripts for quick launching
+  • Use interactive (REPL) or restart modes for flexible workflows
+  • Build CLI, GUI, and libraries via mage
+
+Examples:
+  eec run --config-file dev.toml --program cmd
+  eec tag add dev --import base-dev.toml --import go-dev.toml
+  eec run --tag dev
+  eec gen script
+  eec repl
+
+eec is designed for developers who need clean, reproducible multi-language
+development environments without touching the global system state.`,
 }
+
+
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.

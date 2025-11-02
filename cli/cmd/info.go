@@ -5,14 +5,13 @@ package cmd
 
 import (
 	"github.com/m0090-dev/eec-go/core"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 func info(){
 		//fmt.Printf("version: %s\n",ext.VERSION)
 		e := core.NewEngine(nil,nil)
 		if err := e.Info();err!=nil{
-			log.Fatal().Err(err).Msg("Failed to info")
+			e.Logger.Fatal().Err(err).Msg("Failed to info")
 		}
 }
 

@@ -7,7 +7,6 @@ import (
 	"context"
 	"github.com/m0090-dev/eec-go/core"
 	"github.com/m0090-dev/eec-go/core/types"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"time"
 )
@@ -41,7 +40,7 @@ func run() {
 		Separator: SeparatorRunFlag,
 	}
 	if err := e.Run(context.Background(), opts); err != nil {
-		log.Fatal().Err(err).Msg("Failed to run")
+		e.Logger.Fatal().Err(err).Msg("Failed to run")
 	}
 }
 

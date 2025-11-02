@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/m0090-dev/eec-go/core"
 )
@@ -15,7 +14,7 @@ func genScript(){
 		//domain.GenWrapScript()
 		e := core.NewEngine(nil,nil)
 		if err := e.GenScript();err != nil {
-			log.Fatal().Err(err).Msg("Failed to gen script")
+			e.Logger.Fatal().Err(err).Msg("Failed to gen script")
 		}
 }
 

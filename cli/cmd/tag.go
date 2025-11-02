@@ -7,7 +7,6 @@ package cmd
 import (
 	"github.com/m0090-dev/eec-go/core"
 	"github.com/m0090-dev/eec-go/core/types"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -31,25 +30,25 @@ func add(name string){
 		ImportConfigFiles: importConfigFilesTagFlag,
 	}
 	if err:=e.TagAdd(name,data);err!=nil{
-		log.Fatal().Err(err).Msg("Failed to tag add")
+		e.Logger.Fatal().Err(err).Msg("Failed to tag add")
 	}
 }
 func read(name string){
 	e := core.NewEngine(nil,nil)
 	if err:=e.TagRead(name);err != nil{
-		log.Fatal().Err(err).Msg("Failed to tag read")
+		e.Logger.Fatal().Err(err).Msg("Failed to tag read")
 	}
 }
 func list(){
 	e := core.NewEngine(nil,nil)
 	if err:=e.TagList();err!=nil{
-		log.Fatal().Err(err).Msg("Failed to tag list")
+		e.Logger.Fatal().Err(err).Msg("Failed to tag list")
 	}
 }
 func remove(name string){
 	e := core.NewEngine(nil,nil)
 	if err:=e.TagRemove(name);err!=nil{
-		log.Fatal().Err(err).Msg("Failed tp tag remove")
+		e.Logger.Fatal().Err(err).Msg("Failed tp tag remove")
 	}
 }
 
