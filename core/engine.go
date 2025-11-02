@@ -248,6 +248,7 @@ func (e *Engine) Repl() error {
 	return nil
 }
 
+/*
 // Tag-related core functions (create, list, delete).
 func (e *Engine) TagAdd(name string, tag types.TagData) error {
 	tagName := name
@@ -284,6 +285,60 @@ func (e *Engine) TagAdd(name string, tag types.TagData) error {
 	e.Logger.Info().Str("Tag name", tagName).Msg("Tag added")
 	return nil
 }
+*/
+
+
+// Tag-related core functions (create, list, delete).
+func (e *Engine) TagAdd(name string, tag types.TagData) error {
+	tagName := name
+
+	// tag.ConfigFile が指定されている場合は、その設定ファイルを読み込み Program を補完
+	if tag.ConfigFile != "" && tag.Program == "" {
+		cfg, err := types.ReadConfig(e.OS, e.Logger, tag.ConfigFile)
+		if err == nil {
+			tag.Program = cfg.Program.Path
+			tag.ProgramArgs = cfg.Program.Args
+		} else {
+			e.Logger.Warn().Err(err).Str("configFile", tag.ConfigFile).Msg("failed to read config for program auto-fill")
+		}
+	}
+
+	// make configFile absolute if present
+	if tag.ConfigFile != "" {
+		if abs, err := filepath.Abs(tag.ConfigFile); err == nil {
+			tag.ConfigFile = abs
+		}
+	}
+
+	// -- デバッグ用ログ --
+	e.Logger.Debug().
+		Str("tagName", tagName).
+		Msg("")
+	e.Logger.Debug().
+		Str("configFileFlag", tag.ConfigFile).
+		Msg("")
+	e.Logger.Debug().
+		Str("programFlag", tag.Program).
+		Msg("")
+	e.Logger.Debug().
+		Str("programArgsFlag", strings.Join(tag.ProgramArgs, ", ")).
+		Msg("")
+	e.Logger.Debug().
+		Str("Import config files", strings.Join(tag.ImportConfigFiles, ", ")).
+		Msg("")
+
+	// タグファイル書き込み
+	if err := tag.Write(e.OS, e.Logger, tagName); err != nil {
+		e.Logger.Error().Err(err).Msg("タグファイルの書き込みに失敗しました")
+		return fmt.Errorf("Failed to tag file")
+	}
+
+	e.Logger.Info().Str("Tag name", tagName).Msg("Tag added")
+	return nil
+}
+
+
+
 func (e *Engine) TagRead(tagName string) error {
 	data, err := types.ReadTagData(e.OS, e.Logger, tagName)
 	if err != nil {

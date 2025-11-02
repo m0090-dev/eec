@@ -1,6 +1,7 @@
 package domain
 import "github.com/m0090-dev/eec-go/core/types"
 import "github.com/m0090-dev/eec-go/core/interfaces"
+/*
 // ResolveRunOptionsは、RunOptions、TagData、Config、Importsを考慮して
 // 最終的な ConfigFile, Program, ProgramArgs を返す
 func ResolveRunOptions(opts types.RunOptions, tagData types.TagData, config types.Config, os types.OS, logger interfaces.Logger) (configFile string, program string, programArgs []string, finalEnv []string) {
@@ -54,6 +55,83 @@ func ResolveRunOptions(opts types.RunOptions, tagData types.TagData, config type
     finalEnv = os.Env.Environ()
     for _, cfg := range allConfigs {
         finalEnv = cfg.BuildEnvs(os, logger, finalEnv,opts.Separator)
+    }
+
+    return
+}
+*/
+
+
+// ResolveRunOptionsは、RunOptions、TagData、Config、Importsを考慮して
+// 最終的な ConfigFile, Program, ProgramArgs, 最終環境変数 を返す
+func ResolveRunOptions(
+    opts types.RunOptions,
+    tagData types.TagData,
+    config types.Config,
+    os types.OS,
+    logger interfaces.Logger,
+) (configFile string, program string, programArgs []string, finalEnv []string) {
+
+    // ------------------------
+    // ConfigFile の決定
+    // ------------------------
+    switch {
+    case opts.ConfigFile != "":
+        configFile = opts.ConfigFile          // CLI優先
+    case tagData.ConfigFile != "":
+        configFile = tagData.ConfigFile      // タグ
+    }
+
+    // ------------------------
+    // Program の決定
+    // ------------------------
+    switch {
+    case opts.Program != "":
+        program = opts.Program
+    case tagData.Program != "":
+        program = tagData.Program
+    default:
+        program = config.Program.Path
+    }
+
+    // ------------------------
+    // ProgramArgs の決定
+    // ------------------------
+    switch {
+    case len(opts.ProgramArgs) != 0:
+        programArgs = opts.ProgramArgs
+    case len(tagData.ProgramArgs) != 0:
+        programArgs = tagData.ProgramArgs
+    default:
+        programArgs = config.Program.Args
+    }
+
+    // ------------------------
+    // imports も考慮して最終環境変数を作成
+    // ------------------------
+    allConfigs := []types.Config{}
+
+    // CLI で指定された imports
+    for _, imp := range opts.Imports {
+        if cfg, err := ReadOrFallbackRecursive(opts, os, logger, imp); err == nil {
+            allConfigs = append(allConfigs, cfg)
+        }
+    }
+
+    // タグで指定された imports
+    for _, imp := range tagData.ImportConfigFiles {
+        if cfg, err := ReadOrFallbackRecursive(opts, os, logger, imp); err == nil {
+            allConfigs = append(allConfigs, cfg)
+        }
+    }
+
+    // メイン Config を最後に追加
+    allConfigs = append(allConfigs, config)
+
+    // 現在の環境変数をベースにマージ
+    finalEnv = os.Env.Environ()
+    for _, cfg := range allConfigs {
+        finalEnv = cfg.BuildEnvs(os, logger, finalEnv, opts.Separator)
     }
 
     return
