@@ -32,6 +32,9 @@ call eec tag add dev-lang --import "%USER_EEC_CONFIG_DIR%\go-dev.toml" ^
                           --import "%USER_EEC_CONFIG_DIR%\dotnet-dev.toml" ^
                           --import "%USER_EEC_CONFIG_DIR%\mingw-dev.toml" ^
                           --import "%USER_EEC_CONFIG_DIR%\nasm-dev.toml" ^
+                          --import "%USER_EEC_CONFIG_DIR%\haxe\haxe-dev.toml" ^
+                          --import "%USER_EEC_CONFIG_DIR%\haxe\.env" ^
+                          --import "%USER_EEC_CONFIG_DIR%\swift-dev.toml" ^
 
 REM Finally, dev aggregates the intermediate categories
 call eec tag add dev --import dev-base --import dev-lang --import dev-tools
