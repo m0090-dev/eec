@@ -97,32 +97,26 @@ func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
 		}
 	}
 
-	// ----------------------*/
-	// メイン config 読み込み
-	// -----------------------*/
-	var config types.Config
-	if opts.ConfigFile != "" && e.FS().FileExists(opts.ConfigFile) {
-		config, err = types.ReadConfig(e.OS, e.Logger, opts.ConfigFile)
-		if err != nil {
-			e.Logger.Error().Err(err).Str("configFile", opts.ConfigFile).Msg("failed to read config")
-			return fmt.Errorf("failed to read config %s: %w", opts.ConfigFile, err)
-		}
-	}
+       /* // ----------------------<]*/
+	/*// メイン config 読み込み*/
+	/*// -----------------------*/
+	/*var config types.Config*/
+	/*if opts.ConfigFile != "" && e.FS().FileExists(opts.ConfigFile) {*/
+		/*config, err = types.ReadConfig(e.OS, e.Logger, opts.ConfigFile)*/
+		/*if err != nil {*/
+			/*e.Logger.Error().Err(err).Str("configFile", opts.ConfigFile).Msg("failed to read config")*/
+			/*return fmt.Errorf("failed to read config %s: %w", opts.ConfigFile, err)*/
+		/*}*/
+	/*}*/
 
 	// ----------------------*/
 	// ResolveRunOptions 呼び出し
 	// -----------------------*/
-	configFile, program, pArgs, finalEnv := domain.ResolveRunOptions(opts, tagData, config, e.OS, e.Logger)
+	configFile, program, pArgs, finalEnv := domain.ResolveRunOptions(opts, tagData,e.OS, e.Logger)
 	if program == "" {
 		return errors.New("no program specified")
 	}
 
-	// make configFile absolute if present
-	if configFile != "" {
-		if abs, err := filepath.Abs(configFile); err == nil {
-			configFile = abs
-		}
-	}
 
 	// ----------------------*/
 	// build temp file
