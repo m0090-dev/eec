@@ -1,23 +1,27 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
+
 */
-package cmd
+package subcmd
 
 import (
+	_ "fmt"
 	"github.com/m0090-dev/eec-go/core"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
-func repl(){
-		//fmt.Printf("version: %s\n",ext.VERSION)
-		e := core.NewEngine(nil,nil)
-		if err := e.Repl();err!=nil{
-			log.Fatal().Err(err).Msg("Failed to info")
-		}
+
+
+func tree(args[]string){
+	e := core.NewEngine(nil,nil)
+	if err := e.Tree(args[0]);err != nil {
+		e.Logger.Fatal().Err(err).Msg("Failed to tree")
+	}
+
 }
-// infoCmd represents the info command
-var replCmd = &cobra.Command{
-	Use:   "repl",
+
+// treeCmd represents the tree command
+var treeCmd = &cobra.Command{
+	Use:   "tree",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -25,21 +29,21 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		repl()
+		tree(args)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(replCmd)
-
+	rootCmd.AddCommand(treeCmd)
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// infoCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// treeCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// infoCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// treeCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

@@ -1,3 +1,3 @@
 package types
-var BuildMode string 
+var LogMode string 
 var BuildHash string

@@ -2,7 +2,7 @@
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 */
 
-package cmd
+package subcmd
 
 import (
 	"github.com/m0090-dev/eec-go/core"

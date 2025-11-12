@@ -3,8 +3,8 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 */
 package main
 
-import "github.com/m0090-dev/eec-go/cli/cmd"
-import "github.com/m0090-dev/eec-go/core/types"
+import "github.com/m0090-dev/eec-go/internal/subcmd"
+import "github.com/m0090-dev/eec-go/internal/core/types"
 import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -14,15 +14,18 @@ import (
 
 func init() {
 	//fmt.Printf("Build mode: %s\n",types.BuildMode)
-	if types.BuildMode == "debug" {
+	
+	// debug
+	if types.LogMode == "debug" {
 	  zerolog.SetGlobalLevel(zerolog.DebugLevel)
-        } else {
+        // release
+  	} else {
 	  zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	  cmd.HideWindowRunFlag =  true
-	  cmd.DeleterHideWindowRunFlag = true
+	  subcmd.HideWindowRunFlag =  true
+	  subcmd.DeleterHideWindowRunFlag = true
 	}
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 }
 func main() {
-	cmd.Execute()
+	subcmd.Execute()
 }

@@ -1,27 +1,18 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
-package cmd
+package subcmd
 
 import (
-	_ "fmt"
 	"github.com/m0090-dev/eec-go/core"
+	"github.com/m0090-dev/eec-go/core/interfaces/impl"
+	"github.com/m0090-dev/eec-go/core/types"
 	"github.com/spf13/cobra"
 )
 
-
-func tree(args[]string){
-	e := core.NewEngine(nil,nil)
-	if err := e.Tree(args[0]);err != nil {
-		e.Logger.Fatal().Err(err).Msg("Failed to tree")
-	}
-
-}
-
-// treeCmd represents the tree command
-var treeCmd = &cobra.Command{
-	Use:   "tree",
+// restartCmd represents the restart command
+var restartCmd = &cobra.Command{
+	Use:   "restart",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -29,21 +20,26 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		tree(args)
+		os := types.NewOS()
+		log := impl.NewDefaultLogger()
+		e := core.NewEngine(&os,log)
+		if err := e.Restart();err != nil {
+			log.Fatal().Err(err).Msg("Failed to restart")
+		}
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(treeCmd)
+	rootCmd.AddCommand(restartCmd)
+
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// treeCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// restartCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// treeCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// restartCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
