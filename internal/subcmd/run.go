@@ -5,8 +5,8 @@ package subcmd
 
 import (
 	"context"
-	"github.com/m0090-dev/eec-go/core"
-	"github.com/m0090-dev/eec-go/core/types"
+	"github.com/m0090-dev/eec-go/internal/core"
+	"github.com/m0090-dev/eec-go/internal/ext/types"
 	"github.com/spf13/cobra"
 	"time"
 )

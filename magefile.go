@@ -74,7 +74,7 @@ func BuildCLI(mode string) error {
 	fmt.Printf("Building CLI (%s)...\n", mode)
 
 	root := projectRoot()
-	cliDir := filepath.Join(root, "cli")
+	cliDir := filepath.Join(root, "cmd/eec/")
 	buildFile := filepath.Join(root, "build", defaultTargetBinaryName+targetExt)
 
 	ldflags, gcflags := buildModeArg(mode, "github.com/m0090-dev/eec-go/core")
