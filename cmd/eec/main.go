@@ -3,8 +3,8 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 */
 package main
 
-import "github.com/m0090-dev/eec-go/internal/subcmd"
-import "github.com/m0090-dev/eec-go/internal/types"
+import "github.com/m0090-dev/eec/internal/subcmd"
+import "github.com/m0090-dev/eec/internal/ext/types"
 import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

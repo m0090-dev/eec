@@ -1,6 +1,6 @@
 package types
-import "github.com/m0090-dev/eec-go/core/interfaces"
-import "github.com/m0090-dev/eec-go/core/interfaces/impl"
+import "github.com/m0090-dev/eec/internal/ext/interfaces"
+import "github.com/m0090-dev/eec/internal/ext/interfaces/impl"
 type OS struct {
     Executor interfaces.Executor
     FS       interfaces.FS

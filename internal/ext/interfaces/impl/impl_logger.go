@@ -5,7 +5,7 @@ import (
 	"io"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/m0090-dev/eec-go/core/interfaces"
+	"github.com/m0090-dev/eec/internal/ext/interfaces"
 
 )
 

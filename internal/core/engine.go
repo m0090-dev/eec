@@ -14,11 +14,11 @@ import (
 	"time"
 	//"syscall"
 	"github.com/google/uuid"
-	"github.com/m0090-dev/eec-go/internal/ext/interfaces"
-	"github.com/m0090-dev/eec-go/internal/ext/interfaces/impl"
-	"github.com/m0090-dev/eec-go/internal/ext/types"
-	"github.com/m0090-dev/eec-go/internal/ext/utils/domain"
-	"github.com/m0090-dev/eec-go/internal/ext/utils/general"
+	"github.com/m0090-dev/eec/internal/ext/interfaces"
+	"github.com/m0090-dev/eec/internal/ext/interfaces/impl"
+	"github.com/m0090-dev/eec/internal/ext/types"
+	"github.com/m0090-dev/eec/internal/ext/utils/domain"
+	"github.com/m0090-dev/eec/internal/ext/utils/general"
 	//"github.com/aymanbagabas/go-pty"
 	//"github.com/rs/zerolog/log"
 	//"os"
@@ -233,7 +233,7 @@ func (e *Engine) Info() error {
 	infos = append(infos, fmt.Sprintf("pid=%d", e.Executor().Getpid()))
 	infos = append(infos, fmt.Sprintf("goOS=%s", runtime.GOOS))
 	infos = append(infos, fmt.Sprintf("commitHash=%s", types.BuildHash))
-	infos = append(infos, fmt.Sprintf("buildMode=%s", types.BuildMode))
+	infos = append(infos, fmt.Sprintf("logMode=%s", types.LogMode))
 	e.Logger.Info().Strs("infos", infos).Msg("eec Info messages")
 	return nil
 }

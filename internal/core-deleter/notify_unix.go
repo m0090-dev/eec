@@ -1,6 +1,6 @@
 //go:build linux || darwin
 // +build linux darwin
-package main
+package core_deleter
 
 import (
     "github.com/martinlindhe/notify"

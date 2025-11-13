@@ -1,4 +1,4 @@
-module github.com/m0090-dev/eec-go
+module github.com/m0090-dev/eec
 
 go 1.23.4
 

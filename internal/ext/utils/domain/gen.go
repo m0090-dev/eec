@@ -3,9 +3,9 @@ package domain
 import (
 	"strings"
 	//"github.com/rs/zerolog/log"
-	"github.com/m0090-dev/eec-go/core/utils/general"
-	"github.com/m0090-dev/eec-go/core/types"
-	"github.com/m0090-dev/eec-go/core/interfaces"
+	"github.com/m0090-dev/eec/internal/ext/utils/general"
+	"github.com/m0090-dev/eec/internal/ext/types"
+	"github.com/m0090-dev/eec/internal/ext/interfaces"
 	//"os"
 	"path/filepath"
 	"runtime"

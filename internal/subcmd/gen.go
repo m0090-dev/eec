@@ -6,7 +6,7 @@ package subcmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	"github.com/m0090-dev/eec-go/internal/core"
+	"github.com/m0090-dev/eec/internal/core"
 )
 
 func genScript(){

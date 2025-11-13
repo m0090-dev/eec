@@ -41,11 +41,11 @@ func buildModeArg(mode, pkg string) (ldflags, gcflags []string) {
 	if strings.ToLower(mode) == "debug" {
 		gcflags = []string{"all=-N -l"}
 		ldflags = []string{
-			fmt.Sprintf(`-X %s/types.BuildMode=debug -X %s/types.BuildHash=%s`, pkg, pkg, h),
+			fmt.Sprintf(`-X %s/types.LogMode=debug -X %s/types.BuildHash=%s`, pkg, pkg, h),
 		}
 	} else {
 		ldflags = []string{
-			fmt.Sprintf(`-s -w -X %s/types.BuildMode=release -X %s/types.BuildHash=%s`, pkg, pkg, h),
+			fmt.Sprintf(`-s -w -X %s/types.LogMode=release -X %s/types.BuildHash=%s`, pkg, pkg, h),
 		}
 	}
 	return
@@ -77,7 +77,7 @@ func BuildCLI(mode string) error {
 	cliDir := filepath.Join(root, "cmd/eec/")
 	buildFile := filepath.Join(root, "build", defaultTargetBinaryName+targetExt)
 
-	ldflags, gcflags := buildModeArg(mode, "github.com/m0090-dev/eec-go/core")
+	ldflags, gcflags := buildModeArg(mode, "github.com/m0090-dev/eec/core")
 	args := []string{"build", "-ldflags", strings.Join(ldflags, " "), "-o", buildFile}
 	if len(gcflags) > 0 {
 		args = append(args, "-gcflags", strings.Join(gcflags, " "))
@@ -164,10 +164,10 @@ func BuildDeleter(mode string) error {
 	fmt.Printf("Building deleter (%s)...\n", mode)
 
 	root := projectRoot()
-	deleterDir := filepath.Join(root, "deleter")
+	deleterDir := filepath.Join(root, "cmd/deleter")
 	buildFile := filepath.Join(root, "build", "eec-deleter"+targetExt)
 
-	ldflags, gcflags := buildModeArg(mode, "github.com/m0090-dev/eec-go/deleter")
+	ldflags, gcflags := buildModeArg(mode, "github.com/m0090-dev/eec/deleter")
 	args := []string{"build", "-ldflags", strings.Join(ldflags, " "), "-o", buildFile}
 	if len(gcflags) > 0 {
 		args = append(args, "-gcflags", strings.Join(gcflags, " "))

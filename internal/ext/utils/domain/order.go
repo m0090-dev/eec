@@ -1,7 +1,7 @@
 package domain
 
-import "github.com/m0090-dev/eec-go/core/types"
-import "github.com/m0090-dev/eec-go/core/interfaces"
+import "github.com/m0090-dev/eec/internal/ext/types"
+import "github.com/m0090-dev/eec/internal/ext/interfaces"
 import "path/filepath"
 /*
 // ResolveRunOptionsは、RunOptions、TagData、Config、Importsを考慮して

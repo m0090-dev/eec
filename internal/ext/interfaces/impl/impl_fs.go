@@ -1,6 +1,6 @@
 package impl
 import "os"
-import "github.com/m0090-dev/eec-go/core/internal/ext/utils/general"
+import "github.com/m0090-dev/eec/internal/ext/utils/general"
 
 // OSFS is a thin wrapper over os calls.
 type OSFS struct{}

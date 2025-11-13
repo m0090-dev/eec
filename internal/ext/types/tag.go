@@ -8,9 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/m0090-dev/eec-go/core/utils/general"
-	"github.com/m0090-dev/eec-go/core/interfaces"
-
+	"github.com/m0090-dev/eec/internal/ext/utils/general"
+	"github.com/m0090-dev/eec/internal/ext/interfaces"
 )
 
 type TagData struct {

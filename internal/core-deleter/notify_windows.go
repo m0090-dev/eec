@@ -1,6 +1,6 @@
 //go:build windows
 // +build windows 
-package main
+package core_deleter
 
 import (
     "github.com/go-toast/toast"

@@ -3,8 +3,8 @@ package types
 import (
 	"encoding/json"
 	"github.com/google/uuid"
-	"github.com/m0090-dev/eec-go/core/interfaces"
-	"github.com/m0090-dev/eec-go/core/utils/general"
+	"github.com/m0090-dev/eec/internal/ext/interfaces"
+	"github.com/m0090-dev/eec/internal/ext/utils/general"
 	"github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v3"
 	//"github.com/rs/zerolog/log"

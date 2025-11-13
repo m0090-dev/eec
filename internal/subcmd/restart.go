@@ -4,9 +4,9 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 package subcmd
 
 import (
-	"github.com/m0090-dev/eec-go/internal/core"
-	"github.com/m0090-dev/eec-go/internal/interfaces/impl"
-	"github.com/m0090-dev/eec-go/internal/types"
+	"github.com/m0090-dev/eec/internal/core"
+	"github.com/m0090-dev/eec/internal/ext/interfaces/impl"
+	"github.com/m0090-dev/eec/internal/ext/types"
 	"github.com/spf13/cobra"
 )
 

@@ -7,9 +7,9 @@ import (
 	"runtime"
 	"strings"
 	"path/filepath"
-	"github.com/m0090-dev/eec-go/core/interfaces"
-	"github.com/m0090-dev/eec-go/core/types"
-	"github.com/m0090-dev/eec-go/core/utils/general"
+	"github.com/m0090-dev/eec/internal/ext/interfaces"
+	"github.com/m0090-dev/eec/internal/ext/types"
+	"github.com/m0090-dev/eec/internal/ext/utils/general"
 	gos "os"
 )
 

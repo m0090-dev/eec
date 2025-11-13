@@ -6,7 +6,7 @@ package subcmd
 
 import (
 	_ "fmt"
-	"github.com/m0090-dev/eec-go/internal/core"
+	"github.com/m0090-dev/eec/internal/core"
 	"github.com/spf13/cobra"
 )
 
