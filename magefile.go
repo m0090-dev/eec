@@ -41,11 +41,11 @@ func buildModeArg(mode, pkg string) (ldflags, gcflags []string) {
 	if strings.ToLower(mode) == "debug" {
 		gcflags = []string{"all=-N -l"}
 		ldflags = []string{
-			fmt.Sprintf(`-X %s/types.LogMode=debug -X %s/types.BuildHash=%s`, pkg, pkg, h),
+			fmt.Sprintf(`-X %s.LogMode=debug -X %s.BuildHash=%s`, pkg, pkg, h),
 		}
 	} else {
 		ldflags = []string{
-			fmt.Sprintf(`-s -w -X %s/types.LogMode=release -X %s/types.BuildHash=%s`, pkg, pkg, h),
+			fmt.Sprintf(`-s -w -X %s.LogMode=release -X %s.BuildHash=%s`, pkg, pkg, h),
 		}
 	}
 	return
@@ -77,7 +77,7 @@ func BuildCLI(mode string) error {
 	cliDir := filepath.Join(root, "cmd/eec/")
 	buildFile := filepath.Join(root, "build", defaultTargetBinaryName+targetExt)
 
-	ldflags, gcflags := buildModeArg(mode, "github.com/m0090-dev/eec/core")
+	ldflags, gcflags := buildModeArg(mode, "github.com/m0090-dev/eec/internal/ext/types")
 	args := []string{"build", "-ldflags", strings.Join(ldflags, " "), "-o", buildFile}
 	if len(gcflags) > 0 {
 		args = append(args, "-gcflags", strings.Join(gcflags, " "))
@@ -134,10 +134,10 @@ func BuildLib(mode string) error {
 	fmt.Printf("Building shared lib (%s)...\n", mode)
 
 	root := projectRoot()
-	libDir := filepath.Join(root, "core", "cexport")
+	libDir := filepath.Join(root,"pkg/cexport")
 	buildFile := filepath.Join(root, "build", "libcengine"+targetExt)
 
-	ldflags, gcflags := buildModeArg(mode, "github.com/m0090-dev/eec-go/core")
+	ldflags, gcflags := buildModeArg(mode, "github.com/m0090-dev/eec/pkg/cexport/")
 	args := []string{"build", "-buildmode=c-shared", "-ldflags", strings.Join(ldflags, " "), "-o", buildFile}
 	if len(gcflags) > 0 {
 		args = append(args, "-gcflags", strings.Join(gcflags, " "))
@@ -167,7 +167,7 @@ func BuildDeleter(mode string) error {
 	deleterDir := filepath.Join(root, "cmd/deleter")
 	buildFile := filepath.Join(root, "build", "eec-deleter"+targetExt)
 
-	ldflags, gcflags := buildModeArg(mode, "github.com/m0090-dev/eec/deleter")
+	ldflags, gcflags := buildModeArg(mode, "github.com/m0090-dev/eec/internal/ext/types")
 	args := []string{"build", "-ldflags", strings.Join(ldflags, " "), "-o", buildFile}
 	if len(gcflags) > 0 {
 		args = append(args, "-gcflags", strings.Join(gcflags, " "))

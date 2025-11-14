@@ -16,8 +16,8 @@ import (
 	"sync"
 	"unsafe"
 	"context"
-	"github.com/m0090-dev/eec-go/core"
-	"github.com/m0090-dev/eec-go/core/types"
+	"github.com/m0090-dev/eec/internal/core"
+	"github.com/m0090-dev/eec/internal/ext/types"
 )
 
 // ----------------- ハンドル管理 -----------------

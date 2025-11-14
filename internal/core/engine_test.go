@@ -6,7 +6,7 @@ import (
 	"time"
 	"github.com/m0090-dev/eec/internal/core"
 	"github.com/m0090-dev/eec/internal/ext/types"
-	"github.com/m0090-dev/eec/internal/ext//interfaces"
+	"github.com/m0090-dev/eec/internal/ext/interfaces"
 	"github.com/rs/zerolog/log"
 )
 
