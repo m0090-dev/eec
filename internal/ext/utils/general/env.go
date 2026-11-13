@@ -216,6 +216,11 @@ func executeCommand(rt interfaces.Runtime, cmdLine string, envMap any) string {
 			Msg("command substitution failed: could not create command")
 		return ""
 	}
+	if rt.Env().GOOS() == "windows" {
+		// Hand the line to cmd.exe verbatim: Go's default escaping
+		// turns embedded quotes into \" which cmd cannot parse.
+		UseRawCmdExeLine(cmd, cmdLine)
+	}
 
 	out, err := cmd.Output()
 	if err != nil {

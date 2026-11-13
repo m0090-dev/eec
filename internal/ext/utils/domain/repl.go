@@ -13,6 +13,7 @@ import (
 
 	"github.com/m0090-dev/eec/internal/ext/interfaces"
 	"github.com/m0090-dev/eec/internal/ext/types"
+	"github.com/m0090-dev/eec/internal/ext/utils/general"
 )
 
 // replPrompt is shown before each input line in interactive mode.
@@ -317,6 +318,13 @@ func (s *replSession) runExternal(line string) {
 		cleanup()
 		fmt.Fprintf(s.out, "eec: %v\n", err)
 		return
+	}
+	if goos == "windows" {
+		// Hand the line to cmd.exe verbatim: Go's default
+		// command-line escaping turns embedded quotes into \" which
+		// cmd cannot parse (any quoted command typed at the prompt
+		// would fail with "is not recognized").
+		general.UseRawCmdExeLine(cmd, line)
 	}
 	if s.cwd != "" {
 		cmd.Dir = s.cwd
