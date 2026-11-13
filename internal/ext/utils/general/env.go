@@ -157,11 +157,15 @@ func executeCommand(rt interfaces.Runtime, cmdLine string, envMap any) string {
 		true, // suppress window (Windows)
 	)
 	if err != nil {
+		rt.Logger().Warn().Err(err).Str("command", cmdLine).
+			Msg("command substitution failed: could not create command")
 		return ""
 	}
 
 	out, err := cmd.Output()
 	if err != nil {
+		rt.Logger().Warn().Err(err).Str("command", cmdLine).
+			Msg("command substitution failed: command exited with an error")
 		return ""
 	}
 	res := strings.TrimSpace(string(out))
