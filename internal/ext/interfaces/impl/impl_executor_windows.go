@@ -5,31 +5,41 @@
 package impl
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"syscall"
-	"time"
 )
 
 // DefaultExecutor uses os/exec
 type DefaultExecutor struct{}
 
+// isBatchFile reports whether path refers to a Windows batch script,
+// which can only be executed through cmd.exe.
+func isBatchFile(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	return ext == ".bat" || ext == ".cmd"
+}
+
 func (d DefaultExecutor) Command(path string, args []string, env []string, stdin, stdout, stderr *os.File, hideWindow bool) (*exec.Cmd, error) {
 	var cmd *exec.Cmd
 
-	if _, err := exec.LookPath("cmd.exe"); err == nil {
+	// Batch scripts have no executable format of their own, so only
+	// those are routed through cmd.exe /C. Everything else is executed
+	// directly so argument quoting is not mangled by cmd.exe.
+	if isBatchFile(path) {
 		cmdArgs := append([]string{"/C", path}, args...)
 		cmd = exec.Command("cmd.exe", cmdArgs...)
-
-		// Windows 専用フラグ
-		if hideWindow {
-			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-		} else {
-			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: false, CreationFlags: 0x00000010}
-		}
 	} else {
-		return nil, fmt.Errorf("cmd.exe not found in PATH")
+		cmd = exec.Command(path, args...)
+	}
+
+	// Windows 専用フラグ
+	if hideWindow {
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	} else {
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: false, CreationFlags: 0x00000010}
 	}
 
 	cmd.Env = env
@@ -60,24 +70,6 @@ func (d DefaultExecutor) StartProcess(path string, args []string, env []string, 
 	return cmd, nil
 }
 
-func (d DefaultExecutor) WaitProcess(proc *os.Process, timeout time.Duration) error {
-	// We need the *Cmd to call Wait; but we only have *os.Process here.
-	// Simpler: poll process state.
-	done := make(chan error, 1)
-	go func() {
-		_, err := proc.Wait()
-		done <- err
-	}()
-	if timeout == 0 {
-		return <-done
-	}
-	select {
-	case err := <-done:
-		return err
-	case <-time.After(timeout):
-		return fmt.Errorf("wait timeout after %s", timeout)
-	}
-}
 func (d DefaultExecutor) Getpid() int { return os.Getpid() }
 
 func (d DefaultExecutor) FindProcess(pid int) (*os.Process, error) { return os.FindProcess(pid) }
