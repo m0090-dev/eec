@@ -186,7 +186,12 @@ func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
 		// ----------------------*/
 		// Wait for process
 		// -----------------------*/
-	if err := e.Executor().WaitProcess(cmd.Process, opts.WaitTimeout); err != nil {
+	if err := e.Executor().WaitProcess(cmd, opts.WaitTimeout); err != nil {
+		// Preserve the child's exit code so the CLI can exit with it.
+		var exitErr *types.ProcessExitError
+		if errors.As(err, &exitErr) {
+			return exitErr
+		}
 		return fmt.Errorf("process wait error: %w", err)
 	}
 

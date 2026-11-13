@@ -5,9 +5,11 @@ package subcmd
 
 import (
 	"context"
+	"errors"
 	"github.com/m0090-dev/eec/internal/core"
 	"github.com/m0090-dev/eec/internal/ext/types"
 	"github.com/spf13/cobra"
+	"os"
 	"time"
 )
 
@@ -44,7 +46,7 @@ func run() {
 		ProgramArgs:       programArgsRunFlag,
 		Tag:               tagRunFlag,
 		Imports:           importsRunFlag,
-		WaitTimeout:       time.Duration(waitTimeoutRunFlag),
+		WaitTimeout:       time.Duration(waitTimeoutRunFlag) * time.Second,
 		HideWindow:        HideWindowRunFlag,
 		DeleterPath:       deleterPathRunFlag,
 		DeleterHideWindow: DeleterHideWindowRunFlag,
@@ -54,7 +56,14 @@ func run() {
 		DuplicateNoWarn:   duplicateNoWarnRunFlag,
 	}
 	if err := e.Run(context.Background(), opts); err != nil {
-		e.Runtime.Logger().Fatal().Err(err).Msg("Failed to run")
+		// If the child process exited with a non-zero code, exit with
+		// that same code instead of collapsing it to 1 via Fatal.
+		var exitErr *types.ProcessExitError
+		if errors.As(err, &exitErr) {
+			os.Exit(exitErr.ExitCode)
+		}
+		e.Runtime.Logger().Error().Err(err).Msg("Failed to run")
+		os.Exit(1)
 	}
 }
 
@@ -87,7 +96,7 @@ func init() {
 	runCmd.Flags().StringSliceVarP(&programArgsRunFlag, "program-args", "a", []string{}, "Program args")
 	runCmd.Flags().StringVarP(&tagRunFlag, "tag", "t", "", "Tag name")
 	runCmd.Flags().StringSliceVarP(&importsRunFlag, "import", "i", []string{}, "Import config files")
-	runCmd.Flags().Int("wait-time-out", waitTimeoutRunFlag, "Time to wait before timeout in seconds")
+	runCmd.Flags().IntVar(&waitTimeoutRunFlag, "wait-time-out", 0, "Time to wait before timeout in seconds")
 	runCmd.Flags().BoolVarP(&HideWindowRunFlag, "hide-window", "", false, "Hide the console window when running")
 	runCmd.Flags().StringVar(&deleterPathRunFlag, "deleter-path", "", "Deleter path")
 	runCmd.Flags().BoolVarP(&DeleterHideWindowRunFlag, "deleter-hide-window", "", false, "Hide the console window when running deleter")

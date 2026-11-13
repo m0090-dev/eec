@@ -2,6 +2,7 @@ package core_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -133,7 +134,9 @@ func (fs *coreFS) Stat(p string) (os.FileInfo, error) {
 
 func (fs *coreFS) IsNotExist(err error) bool { return os.IsNotExist(err) }
 func (fs *coreFS) OpenFile(p string, flag int, perm uint32) (*os.File, error) {
-	return os.Open(os.DevNull)
+	// Manifest writes must go to a real writable file, otherwise
+	// Engine.Run can never get past WriteToManifest in tests.
+	return os.OpenFile(p, flag, os.FileMode(perm))
 }
 func (fs *coreFS) O_APPEND() int { return os.O_APPEND }
 func (fs *coreFS) O_CREATE() int { return os.O_CREATE }
@@ -144,6 +147,7 @@ func (fs *coreFS) O_WRONLY() int { return os.O_WRONLY }
 type coreExecutor struct {
 	pid      int
 	startErr error
+	waitErr  error
 }
 
 func (ex *coreExecutor) Getpid() int { return ex.pid }
@@ -168,7 +172,7 @@ func (ex *coreExecutor) StartProcess(
 	return cmd, nil
 }
 
-func (ex *coreExecutor) WaitProcess(_ *os.Process, _ time.Duration) error { return nil }
+func (ex *coreExecutor) WaitProcess(_ *exec.Cmd, _ time.Duration) error { return ex.waitErr }
 
 func (ex *coreExecutor) Command(
 	name string, args, env []string,
@@ -253,6 +257,20 @@ func TestEngine_Run_StartProcessError_ReturnsError(t *testing.T) {
 	err := e.Run(context.Background(), types.RunOptions{Program: "prog"})
 	if err == nil {
 		t.Error("expected error when StartProcess fails, got nil")
+	}
+}
+
+func TestEngine_Run_ChildExitCode_Propagated(t *testing.T) {
+	rt := newCoreRuntime()
+	rt.exec.waitErr = &types.ProcessExitError{ExitCode: 7}
+	e := core.NewEngine(rt)
+	err := e.Run(context.Background(), types.RunOptions{Program: "prog"})
+	var exitErr *types.ProcessExitError
+	if !errors.As(err, &exitErr) {
+		t.Fatalf("expected *types.ProcessExitError, got %T: %v", err, err)
+	}
+	if exitErr.ExitCode != 7 {
+		t.Errorf("expected exit code 7, got %d", exitErr.ExitCode)
 	}
 }
 
