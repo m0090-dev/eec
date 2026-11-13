@@ -48,7 +48,7 @@ func TestSortEnvsByDependency_CircularReportsChain(t *testing.T) {
 		{Key: "A", Value: "${B}"},
 		{Key: "B", Value: "${A}"},
 	}}
-	err := cfg.SortEnvsByDependency()
+	err := cfg.SortEnvsByDependency(false)
 	if err == nil {
 		t.Fatal("expected circular reference error, got nil")
 	}

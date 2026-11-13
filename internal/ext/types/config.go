@@ -64,7 +64,28 @@ func extractDependencies(val interface{}) []string {
 	return deps
 }
 
-func (c *Config) SortEnvsByDependency() error {
+// SortEnvsByDependency orders c.Envs so that variables referenced via
+// ${} are defined before the variables that use them.
+//
+// caseInsensitive must reflect the target OS (see EnvKeysCaseInsensitive:
+// true on Windows, false elsewhere). When true, dependency matching and
+// de-duplication fold case ("Path" and "PATH" are the same variable);
+// when false, keys must match exactly, mirroring case-sensitive Unix
+// environments.
+func (c *Config) SortEnvsByDependency(caseInsensitive bool) error {
+	canon := func(key string) string {
+		if caseInsensitive {
+			return strings.ToUpper(key)
+		}
+		return key
+	}
+	equalKey := func(a, b string) bool {
+		if caseInsensitive {
+			return strings.EqualFold(a, b)
+		}
+		return a == b
+	}
+
 	resolved := make([]Environ, 0, len(c.Envs))
 	seen := make(map[string]bool)
 
@@ -73,12 +94,12 @@ func (c *Config) SortEnvsByDependency() error {
 		// 循環チェック: 現在の依存チェーンに自分が含まれていたら、
 		// 経路全体（例: A -> B -> A）を添えてエラーにする。
 		for _, link := range chain {
-			if strings.EqualFold(link, e.Key) {
+			if equalKey(link, e.Key) {
 				full := append(append([]string{}, chain...), e.Key)
 				return fmt.Errorf("circular reference detected: %s", strings.Join(full, " -> "))
 			}
 		}
-		if seen[strings.ToUpper(e.Key)] {
+		if seen[canon(e.Key)] {
 			return nil
 		}
 
@@ -89,7 +110,7 @@ func (c *Config) SortEnvsByDependency() error {
 		for _, depKey := range deps {
 			// 設定ファイル内の他の変数に依存しているか確認
 			for _, other := range c.Envs {
-				if strings.EqualFold(other.Key, depKey) {
+				if equalKey(other.Key, depKey) {
 					if err := resolve(other, chain); err != nil {
 						return err
 					}
@@ -97,13 +118,13 @@ func (c *Config) SortEnvsByDependency() error {
 			}
 		}
 
-		seen[strings.ToUpper(e.Key)] = true
+		seen[canon(e.Key)] = true
 		resolved = append(resolved, e)
 		return nil
 	}
 
 	for _, e := range c.Envs {
-		if !seen[strings.ToUpper(e.Key)] {
+		if !seen[canon(e.Key)] {
 			if err := resolve(e, nil); err != nil {
 				return err
 			}
@@ -304,7 +325,7 @@ PARSED:
 		return Config{}, fmt.Errorf("normalize error: %w", err)
 	}
 
-	if err := cfg.SortEnvsByDependency(); err != nil {
+	if err := cfg.SortEnvsByDependency(EnvKeysCaseInsensitive(rt.Env().GOOS())); err != nil {
 		return Config{}, fmt.Errorf("dependency sort error: %w", err)
 	}
 
@@ -327,7 +348,7 @@ func ReadJson(rt interfaces.Runtime, fileName string) (Config, error) {
 		if err := config.NormalizeEnvs(rt); err != nil {
 			return Config{}, err
 		}
-		if err := config.SortEnvsByDependency(); err != nil {
+		if err := config.SortEnvsByDependency(EnvKeysCaseInsensitive(rt.Env().GOOS())); err != nil {
 			return Config{}, err
 		}
 	}
@@ -350,7 +371,7 @@ func ReadYaml(rt interfaces.Runtime, fileName string) (Config, error) {
 		if err := config.NormalizeEnvs(rt); err != nil {
 			return Config{}, err
 		}
-		if err := config.SortEnvsByDependency(); err != nil {
+		if err := config.SortEnvsByDependency(EnvKeysCaseInsensitive(rt.Env().GOOS())); err != nil {
 			return Config{}, err
 		}
 	}
@@ -375,7 +396,7 @@ func ReadToml(rt interfaces.Runtime, fileName string) (Config, error) {
 		if err := config.NormalizeEnvs(rt); err != nil {
 			return Config{}, err
 		}
-		if err := config.SortEnvsByDependency(); err != nil {
+		if err := config.SortEnvsByDependency(EnvKeysCaseInsensitive(rt.Env().GOOS())); err != nil {
 			return Config{}, err
 		}
 	}
@@ -485,15 +506,17 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 		}
 	}
 
+	goos := rt.Env().GOOS()
 	envMap := make(map[string][]string)
-	// baseEnv (既存の環境変数) を map に変換
+	// baseEnv (既存の環境変数) を map に変換。
+	// キーは OS のケース規則で正規化する (Windows: 大文字化、それ以外: 原形)。
 	for _, e := range baseEnv {
 		if strings.HasPrefix(e, "=") {
 			continue
 		}
 		parts := strings.SplitN(e, "=", 2)
 		if len(parts) == 2 {
-			key := strings.ToUpper(parts[0])
+			key := CanonicalEnvKey(goos, parts[0])
 			if key == "" {
 				continue
 			}
@@ -507,7 +530,7 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 			rt.Logger().Warn().Interface("env", env).Msg("envのキーが空です")
 			continue
 		}
-		keyUpper := strings.ToUpper(env.Key)
+		canonKey := CanonicalEnvKey(goos, env.Key)
 
 		// 1. まず「生の値 (raw)」をスライスとして取り出す
 		var rawStrings []string
@@ -526,7 +549,7 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 			continue
 		}
 		rt.Logger().Debug().
-			Str("key", keyUpper).
+			Str("key", canonKey).
 			Bool("isListType", isListType).
 			Interface("rawValues", rawStrings).
 			Msg("Processing environment variable")
@@ -544,7 +567,7 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 		if isListType {
 
 			// a) 既存の値を登録
-			for _, v := range envMap[keyUpper] {
+			for _, v := range envMap[canonKey] {
 				for _, part := range strings.Split(v, separator) {
 					part = strings.TrimSpace(part)
 					if part != "" {
@@ -573,7 +596,7 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 		}
 
 		// 4. 重要：envMap を即座に更新 (これで次のループの展開で参照可能になる)
-		envMap[keyUpper] = merged
+		envMap[canonKey] = merged
 	}
 
 	// map を []string に変換して返す

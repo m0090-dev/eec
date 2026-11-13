@@ -22,9 +22,22 @@ func findMatchingParen(runes []rune, start int) (content string, nextIdx int) {
 	return "", -1
 }
 
-// 型がバラバラな envMap から値を取り出すヘルパー
-func getValuesFromAny(envMap any, key string) []string {
-	key = strings.ToUpper(key)
+// canonicalEnvKey mirrors types.CanonicalEnvKey: keys are upper-cased
+// only on Windows, where environment variables are case-insensitive.
+// This package cannot import types (types imports general), so the rule
+// is duplicated here in miniature — keep the two in sync.
+func canonicalEnvKey(goos, key string) string {
+	if goos == "windows" {
+		return strings.ToUpper(key)
+	}
+	return key
+}
+
+// 型がバラバラな envMap から値を取り出すヘルパー。
+// envMap のキーは BuildEnvs が OS のケース規則で正規化済みなので、
+// 参照キーも同じ規則 (goos) で正規化してから引く。
+func getValuesFromAny(goos string, envMap any, key string) []string {
+	key = canonicalEnvKey(goos, key)
 	//fmt.Printf("DEBUG: Looking for [%s]\n", key)
 	switch m := envMap.(type) {
 	case map[string]map[string]struct{}:
@@ -77,13 +90,20 @@ func replaceVariables(rt interfaces.Runtime, input string, envMap any) string {
 		if len(submatches) == 2 {
 			key := submatches[1]
 			// 1. envMap (JSONなど) から値を探す
-			vals := getValuesFromAny(envMap, key)
+			vals := getValuesFromAny(rt.Env().GOOS(), envMap, key)
 			if len(vals) > 0 {
 				return strings.Join(vals, sep)
 			}
-			// 2. なければ OS 環境変数から探す
+			// 2. なければ OS 環境変数から探す。
+			// Windows では OS 側の検索がケース不感だが、モック等の
+			// 実装に備えて正規化したキーでも試す。
 			if val, ok := rt.Env().LookupEnv(key); ok {
 				return val
+			}
+			if canon := canonicalEnvKey(rt.Env().GOOS(), key); canon != key {
+				if val, ok := rt.Env().LookupEnv(canon); ok {
+					return val
+				}
 			}
 		}
 		return match

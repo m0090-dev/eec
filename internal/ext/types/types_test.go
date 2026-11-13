@@ -230,7 +230,8 @@ func TestConfig_SortEnvs(t *testing.T) {
 		},
 	}
 
-	err := cfg.SortEnvsByDependency()
+	// mock runtime は linux (ケースセンシティブ) なので false。
+	err := cfg.SortEnvsByDependency(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,8 +275,8 @@ func TestTrackEnvOverrides(t *testing.T) {
 		{SourcePath: "file2.toml", Envs: []types.Environ{{Key: "VAR", Value: "new"}}},
 	}
 
-	// 上書きの追跡[cite: 10]
-	tracker := types.TrackEnvOverrides(configs)
+	// 上書きの追跡[cite: 10] (linux: ケースセンシティブ)
+	tracker := types.TrackEnvOverrides(configs, "linux")
 
 	if tracker.Vars["VAR"].OverriddenBy != "file2.toml" {
 		t.Errorf("Override tracking failed: %+v", tracker.Vars["VAR"])
