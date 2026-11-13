@@ -11,9 +11,10 @@ It lets you safely manage and execute programs with environment variables define
 - **Tags** for grouping and reusing multiple environments
 - Script generation for shortcut commands
 - Safe execution — never modifies the global system environment
-- Interactive REPL and restart functionality with state management
+- Interactive REPL (`eec repl`) with in-session `reload` of edited configs, plus a `--watch` restart mode for `run`
+- Inspection commands: `which`, `validate` and `doctor` for resolved environments
 - Duplicate environment variable tracking with configurable warning behavior (`--duplicate-strict` / `--duplicate-no-warn`)
-- Environment variable dump support for both Unix and Windows shells
+- Environment variable dump support for Unix, Windows and PowerShell shells
 - Build automation via `mage`:
   - `mage buildcli debug` / `mage buildcli release`
   - `mage buildlib debug` / `mage buildlib release`
@@ -53,7 +54,14 @@ eec run -c test.toml -p powershell -a "-NoExit","-Command","Write-Output 'hello 
 | `--duplicate-no-warn` | Suppress warnings for duplicate environment variables |
 | `--no-expand` | Disable `${}` variable expansion (also available on `dump`) |
 | `--no-exec` | Disable `$()` command substitution, leaving it literal (also available on `dump`) |
+| `--watch` | Restart the program whenever a config file changes (see below) |
 | `-v`, `--verbose` | Enable debug logging |
+
+**Watch mode:** with `--watch`, `run` supervises the program: whenever one of the config files that fed the resolution changes, the child is stopped, the environment is re-resolved from scratch, and the program restarts. If the child exits on its own, watch mode ends with the child's exit code; Ctrl+C stops the child and exits 130. Watch mode requires file-based configs (inline configs cannot be watched).
+
+```bash
+eec run -c dev.toml -p myserver --watch
+```
 
 **Run using a tag:**
 
@@ -179,11 +187,14 @@ tdev cmd
 Outputs the fully resolved environment variables for a given config or tag in shell-ready format. Useful for debugging or sourcing into other scripts.
 
 ```bash
-# Unix format (export KEY=VALUE)
+# Unix format (export KEY='VALUE')
 eec dump --tag dev --shell unix
 
-# Windows format (set KEY=VALUE)
+# Windows format (set "KEY=VALUE")
 eec dump --tag dev --shell win
+
+# PowerShell format ($env:KEY = 'VALUE')
+eec dump --tag dev --shell pwsh
 
 # Raw KEY=VALUE format
 eec dump --tag dev
@@ -191,8 +202,9 @@ eec dump --tag dev
 
 | `--shell` value | Output format |
 |---|---|
-| `unix` | `export KEY=VALUE` |
-| `win` | `set KEY=VALUE` |
+| `unix` | `export KEY='VALUE'` (single-quoted, `'` escaped as `'\''`) |
+| `win` | `set "KEY=VALUE"` |
+| `pwsh` / `powershell` | `$env:KEY = 'VALUE'` (single-quoted, `'` escaped by doubling) |
 | (omitted) | `KEY=VALUE` |
 
 ---
@@ -213,6 +225,102 @@ pid:         12345
 goOS:        linux
 commitHash:  abc1234
 logMode:     release
+```
+
+---
+
+### 10. `which` — Find a program in the managed environment
+
+Resolves the environment like `run`/`dump` and prints the absolute path of a program as found in that environment's `PATH`. On Windows the `PATHEXT` extensions are tried for bare names; on Unix a file must be executable. Exits with status 1 when the program is not found.
+
+```bash
+eec which -t dev ninja
+eec which -c test.toml ./tool
+```
+
+---
+
+### 11. `validate` — Check configs without running anything
+
+Loads every config source selected by `-c`/`-t`/`-i` exactly the way `run` would — import recursion and circular-import detection included — and builds its environment. Prints `OK <source>` or `NG <source>: <error>` per source and exits non-zero when any source is NG.
+
+```bash
+eec validate -c test.toml -i extra.toml
+eec validate -t dev
+```
+
+---
+
+### 12. `doctor` — Sanity-check a resolved environment
+
+Prints a checklist for the environment resolved from `-c`/`-t`/`-i`:
+
+- ✓/✗ the configs resolve without error
+- ✓/⚠ every absolute `PATH` entry exists (missing entries are warnings, not failures)
+- ✓/✗ the program given with `-p` is found in the resolved `PATH`
+- ✓/✗ every import of the tag given with `-t` resolves to a file or another tag
+
+The exit status is non-zero only when a ✗ check fails.
+
+```bash
+eec doctor -t dev -p ninja
+```
+
+---
+
+### 13. `shell` — Interactive shell in the managed environment
+
+Starts an interactive shell as a child process with the resolved environment (`%ComSpec%` on Windows, `$SHELL` or `sh` on Unix) and propagates its exit code. Note that this is a **new** shell process: it cannot modify the shell that launched eec — no program can change its parent process's environment.
+
+```bash
+eec shell -t dev
+```
+
+---
+
+### 14. `repl` — Interactive session with reload
+
+Starts a line-oriented session in the resolved environment. Each line runs through the OS shell (`cmd /c` on Windows, `sh -c` on Unix) with the session environment and working directory; a failing command prints `[exit N]` and the session continues.
+
+| Builtin | Description |
+|---|---|
+| `env [KEY]` | Print the session environment (or one variable) |
+| `set KEY=VALUE` | Set a session variable (survives `reload`) |
+| `unset KEY` | Remove a session variable (survives `reload`) |
+| `cd [DIR]` | Change (or print) the session working directory |
+| `reload` | Re-read the configs and rebuild the environment |
+| `help` | List the builtins |
+| `exit` / `quit` | Leave the REPL |
+
+**`reload` is the supported way to pick up config edits in a live session**: edit the config file, type `reload`, and keep working in the same session with the new environment — no process restart needed. Variables changed with `set`/`unset` are re-applied on top of the reloaded environment.
+
+```bash
+eec repl -t dev
+eec> set DEBUG=1
+eec> ninja        # runs with the session environment
+eec> reload       # after editing the config file
+```
+
+---
+
+### 15. `init` — Write a starter config
+
+Writes a commented starter `eec.toml` (or the given path) with an `[envs]` section, OS-specific section examples, and a commented-out `[capture]` example. Refuses to overwrite an existing file unless `--force` is given.
+
+```bash
+eec init
+eec init dev.toml --force
+```
+
+---
+
+### 16. `completion` — Shell completion scripts
+
+Generates completion scripts for bash, zsh, fish and PowerShell (cobra's built-in command). The `-t`/`--tag` flags complete tag names from the tag store, and `-c`/`--config-file` uses regular file completion.
+
+```bash
+# bash example
+source <(eec completion bash)
 ```
 
 ---

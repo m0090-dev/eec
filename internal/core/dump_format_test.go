@@ -25,8 +25,16 @@ func TestFormatDumpLine(t *testing.T) {
 		{"win simple", "FOO=bar", "win", `set "FOO=bar"`, true},
 		{"win space and semicolon", "PATH=C:\\a b;C:\\x", "win", `set "PATH=C:\a b;C:\x"`, true},
 		{"win no equals skipped", "FOO", "win", "", false},
+		{"pwsh simple", "FOO=bar", "pwsh", "$env:FOO = 'bar'", true},
+		{"pwsh alias powershell", "FOO=bar", "powershell", "$env:FOO = 'bar'", true},
+		{"pwsh space and semicolon", "PATH=C:\\a b;C:\\x", "pwsh", `$env:PATH = 'C:\a b;C:\x'`, true},
+		{"pwsh single quote doubled", "FOO=it's", "pwsh", "$env:FOO = 'it''s'", true},
+		{"pwsh empty value", "FOO=", "pwsh", "$env:FOO = ''", true},
+		{"pwsh value with equals", "FOO=a=b", "pwsh", "$env:FOO = 'a=b'", true},
+		{"pwsh newline kept literal", "FOO=line1\nline2", "pwsh", "$env:FOO = 'line1\nline2'", true},
+		{"pwsh no equals skipped", "FOO", "pwsh", "", false},
 		{"default raw", "FOO=a b;c", "", "FOO=a b;c", true},
-		{"unknown shell raw", "FOO=bar", "pwsh", "FOO=bar", true},
+		{"unknown shell raw", "FOO=bar", "fish", "FOO=bar", true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
