@@ -22,7 +22,6 @@ func init() {
 	} else {
 		zerolog.SetGlobalLevel(zerolog.WarnLevel)
 		subcmd.HideWindowRunFlag = true
-		subcmd.DeleterHideWindowRunFlag = true
 	}
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 }

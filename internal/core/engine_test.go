@@ -134,8 +134,7 @@ func (fs *coreFS) Stat(p string) (os.FileInfo, error) {
 
 func (fs *coreFS) IsNotExist(err error) bool { return os.IsNotExist(err) }
 func (fs *coreFS) OpenFile(p string, flag int, perm uint32) (*os.File, error) {
-	// Manifest writes must go to a real writable file, otherwise
-	// Engine.Run can never get past WriteToManifest in tests.
+	// Open the real file so code paths that append to files work in tests.
 	return os.OpenFile(p, flag, os.FileMode(perm))
 }
 func (fs *coreFS) O_APPEND() int { return os.O_APPEND }

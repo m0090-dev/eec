@@ -65,6 +65,9 @@ func Engine_Run(p C.PEngine,
 	tag *C.char,
 	imports C.CStringArray,
 	waitTimeoutMs C.int,
+	// Deprecated: the deleter subsystem was removed. The deleterPath and
+	// deleterHideWindow parameters are kept only to preserve the C ABI
+	// and are ignored.
 	hideWindow C.int, deleterPath *C.char, deleterHideWindow C.int) C.int {
 
 	id := uintptr(unsafe.Pointer(p))
@@ -82,15 +85,6 @@ func Engine_Run(p C.PEngine,
 		goHideWindow = true
 	} else {
 		goHideWindow = false
-	}
-
-	goDeleterPath := C.GoString(deleterPath)
-	var goDeleterHideWindow bool
-
-	if deleterHideWindow == 1 {
-		goDeleterHideWindow = true
-	} else {
-		goDeleterHideWindow = false
 	}
 
 	// programArgs 配列変換
@@ -111,15 +105,13 @@ func Engine_Run(p C.PEngine,
 
 	// RunOptions を構築
 	opts := types.RunOptions{
-		ConfigFile:        goConfigFile,
-		Program:           goProgram,
-		ProgramArgs:       goProgramArgs,
-		Tag:               goTag,
-		Imports:           goImports,
-		WaitTimeout:       time.Duration(waitTimeoutMs) * time.Millisecond,
-		HideWindow:        goHideWindow,
-		DeleterPath:       goDeleterPath,
-		DeleterHideWindow: goDeleterHideWindow,
+		ConfigFile:  goConfigFile,
+		Program:     goProgram,
+		ProgramArgs: goProgramArgs,
+		Tag:         goTag,
+		Imports:     goImports,
+		WaitTimeout: time.Duration(waitTimeoutMs) * time.Millisecond,
+		HideWindow:  goHideWindow,
 	}
 
 	// 実行

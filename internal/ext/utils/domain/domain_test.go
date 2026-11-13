@@ -328,42 +328,6 @@ func TestResolveRunOptions_NonExistentConfigFileSkipped(t *testing.T) {
 }
 
 // =============================================================
-// run.go — IsProcessRunning (unsupported OS のみ)
-// =============================================================
-
-func TestIsProcessRunning_UnsupportedOS(t *testing.T) {
-	rt := newMockRuntime()
-	rt.env.goos = "plan9"
-	_, err := domain.IsProcessRunning(rt, "someproc")
-	if err == nil {
-		t.Error("expected error for unsupported OS, got nil")
-	}
-	if !strings.Contains(err.Error(), "unsupported OS") {
-		t.Errorf("error %q should contain 'unsupported OS'", err.Error())
-	}
-}
-
-// =============================================================
-// run.go — IsPIDRunning (不正 PID のみ。実プロセス確認は行わない)
-// =============================================================
-
-func TestIsPIDRunning_ZeroPID(t *testing.T) {
-	rt := newMockRuntime()
-	_, err := domain.IsPIDRunning(rt, rt.logger, 0)
-	if err == nil {
-		t.Error("expected error for PID 0")
-	}
-}
-
-func TestIsPIDRunning_NegativePID(t *testing.T) {
-	rt := newMockRuntime()
-	_, err := domain.IsPIDRunning(rt, rt.logger, -1)
-	if err == nil {
-		t.Error("expected error for negative PID")
-	}
-}
-
-// =============================================================
 // run.go — ReadOrFallback / ReadOrFallbackRecursive
 // =============================================================
 

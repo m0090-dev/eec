@@ -27,8 +27,6 @@ var tagRunFlag string
 var importsRunFlag []string
 var waitTimeoutRunFlag int
 var HideWindowRunFlag bool
-var deleterPathRunFlag string
-var DeleterHideWindowRunFlag bool
 var SeparatorRunFlag string
 var verboseRunFlag bool
 var duplicateStrictRunFlag bool
@@ -37,23 +35,21 @@ var duplicateNoWarnRunFlag bool
 func run() {
 	e := core.NewEngine(nil)
 	opts := types.RunOptions{
-		ConfigFile:        configFileRunFlag,
-		InlineConfig:      inlineConfigRunFlag,
-		InlineConfigToml:  inlineConfigTomlRunFlag,
-		InlineConfigYaml:  inlineConfigYamlRunFlag,
-		InlineConfigJson:  inlineConfigJsonRunFlag,
-		Program:           programRunFlag,
-		ProgramArgs:       programArgsRunFlag,
-		Tag:               tagRunFlag,
-		Imports:           importsRunFlag,
-		WaitTimeout:       time.Duration(waitTimeoutRunFlag) * time.Second,
-		HideWindow:        HideWindowRunFlag,
-		DeleterPath:       deleterPathRunFlag,
-		DeleterHideWindow: DeleterHideWindowRunFlag,
-		Separator:         SeparatorRunFlag,
-		Verbose:           verboseRunFlag,
-		DuplicateStrict:   duplicateStrictRunFlag,
-		DuplicateNoWarn:   duplicateNoWarnRunFlag,
+		ConfigFile:       configFileRunFlag,
+		InlineConfig:     inlineConfigRunFlag,
+		InlineConfigToml: inlineConfigTomlRunFlag,
+		InlineConfigYaml: inlineConfigYamlRunFlag,
+		InlineConfigJson: inlineConfigJsonRunFlag,
+		Program:          programRunFlag,
+		ProgramArgs:      programArgsRunFlag,
+		Tag:              tagRunFlag,
+		Imports:          importsRunFlag,
+		WaitTimeout:      time.Duration(waitTimeoutRunFlag) * time.Second,
+		HideWindow:       HideWindowRunFlag,
+		Separator:        SeparatorRunFlag,
+		Verbose:          verboseRunFlag,
+		DuplicateStrict:  duplicateStrictRunFlag,
+		DuplicateNoWarn:  duplicateNoWarnRunFlag,
 	}
 	if err := e.Run(context.Background(), opts); err != nil {
 		// If the child process exited with a non-zero code, exit with
@@ -98,8 +94,6 @@ func init() {
 	runCmd.Flags().StringSliceVarP(&importsRunFlag, "import", "i", []string{}, "Import config files")
 	runCmd.Flags().IntVar(&waitTimeoutRunFlag, "wait-time-out", 0, "Time to wait before timeout in seconds")
 	runCmd.Flags().BoolVarP(&HideWindowRunFlag, "hide-window", "", false, "Hide the console window when running")
-	runCmd.Flags().StringVar(&deleterPathRunFlag, "deleter-path", "", "Deleter path")
-	runCmd.Flags().BoolVarP(&DeleterHideWindowRunFlag, "deleter-hide-window", "", false, "Hide the console window when running deleter")
 	runCmd.Flags().StringVarP(&SeparatorRunFlag, "separator", "s", "", "Separator value")
 
 	// #38: ログ制御

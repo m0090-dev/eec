@@ -104,7 +104,7 @@ func (fs *mockFS) ReadFile(path string) ([]byte, error) {
 	if d, ok := fs.fileData[path]; ok {
 		return d, nil
 	}
-	// WriteToManifest などが実ファイルに書き出すケースを考慮
+	// 実ファイルに書き出すケースを考慮
 	return os.ReadFile(path)
 }
 func (fs *mockFS) WriteFile(path string, data []byte, _ uint32) error {
@@ -193,43 +193,6 @@ func (rt *mockRuntime) Console() interfaces.Console         { return rt.console 
 // =============================================================
 // types 固有のテストケース
 // =============================================================
-
-// --- manifest.go のテスト ---
-
-func TestManifest_RoundTrip(t *testing.T) {
-	rt := newMockRuntime()
-
-	// 期待値を 9999 に固定
-	const testPID = 9999
-
-	m := &types.Manifest{
-		TempFilePath: filepath.Join(rt.FS().TempDir(), "test_data.tmp"),
-		EECPID:       testPID, // ここで明示的にセットする
-	}
-
-	// 書き込み実行
-	path, err := m.WriteToManifest(rt)
-	if err != nil {
-		t.Fatalf("WriteToManifest failed: %v", err)
-	}
-	defer os.Remove(path)
-
-	// 読み込み実行
-	entries, err := types.ReadManifest(rt)
-	if err != nil {
-		t.Fatalf("ReadManifest failed: %v", err)
-	}
-
-	if len(entries) == 0 {
-		t.Fatal("no entries found in manifest")
-	}
-
-	// 書き込んだ値がそのまま戻ってくるかチェック
-	lastEntry := entries[len(entries)-1]
-	if lastEntry.EECPID != testPID {
-		t.Errorf("PID mismatch: got %d, want %d", lastEntry.EECPID, testPID)
-	}
-}
 
 // --- tag.go のテスト ---
 

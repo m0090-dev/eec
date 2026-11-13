@@ -13,8 +13,6 @@ var outputDir string
 var cleanFlag bool
 
 func genScript() {
-	//domain.GenUtilsScript()
-	//domain.GenWrapScript()
 	e := core.NewEngine(nil)
 	if err := e.GenScript(outputDir, cleanFlag); err != nil {
 		e.Runtime.Logger().Fatal().Err(err).Msg("Failed to gen script")

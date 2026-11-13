@@ -2,12 +2,9 @@
 package core
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/m0090-dev/eec/internal/ext/interfaces"
 	"github.com/m0090-dev/eec/internal/ext/interfaces/impl"
 	"github.com/m0090-dev/eec/internal/ext/types"
@@ -58,20 +55,12 @@ func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
 		Strs("imports", opts.Imports).
 		Int("Wait timeout", int(opts.WaitTimeout)).
 		Bool("Hide window", opts.HideWindow).
-		Str("Deleter path", opts.DeleterPath).
-		Bool("Deleter hide window", opts.DeleterHideWindow).
 		Msg("Run called")
 
 	if opts.Verbose {
 		e.Runtime.SetLogger(
 			e.Runtime.Logger().EnableDebug(),
 		)
-	}
-	// -----------------------*/
-	// deleter起動
-	// -----------------------*/
-	if err := domain.LaunchDeleter(e.Runtime, opts); err != nil {
-		return err
 	}
 
 	// ----------------------*/
@@ -88,7 +77,7 @@ func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
 	// ----------------------*/
 	// ResolveRunOptions 呼び出し
 	// -----------------------*/
-	configFile, program, pArgs, finalEnv, allConfigs, err := domain.ResolveRunOptions(opts, tagData, e.Runtime)
+	_, program, pArgs, finalEnv, allConfigs, err := domain.ResolveRunOptions(opts, tagData, e.Runtime)
 	if err != nil {
 		return err // 循環参照などのエラーがあれば、ここで即座に終了
 	}
@@ -103,89 +92,24 @@ func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
 	}
 
 	// ----------------------*/
-	// build temp file
-	// -----------------------*/
-	selfProgram := e.CommandLine().Args()[0]
-	tmpDir := e.FS().TempDir()
-	tmpPrefix := fmt.Sprintf("%s_%s_%s.tmp",
-		general.RemoveExtension(filepath.Base(selfProgram)),
-		general.RemoveExtension(filepath.Base(program)),
-		uuid.New().String(),
-	)
-	tmpPath := filepath.Join(tmpDir, tmpPrefix)
-	tmpFile, err := e.FS().Create(tmpPath)
-	if err != nil {
-		e.Runtime.Logger().Error().Err(err).Str("prefix", tmpPrefix).Msg("failed to create temp file")
-		return fmt.Errorf("failed to create temp file: %w", err)
-	}
-	e.Runtime.Logger().Info().Str("tempFile", tmpPath).Msg("created temp file")
-
-	// manifest 書き込み
-	manifest := types.Manifest{
-		TempFilePath: tmpPath,
-		EECPID:       e.Executor().Getpid(),
-	}
-	if _, err := manifest.WriteToManifest(e.Runtime); err != nil {
-		tmpFile.Close()
-		return fmt.Errorf("failed to write manifest: %w", err)
-	}
-
-	// ----------------------*/
 	// Start process
 	// -----------------------*/
-	var childPid int
 	cmd, err := e.Executor().StartProcess(program, pArgs, finalEnv,
 		e.Console().Stdin(), e.Console().Stdout(), e.Console().Stderr(), opts.HideWindow)
 	if err != nil {
-		tmpFile.Close()
 		return fmt.Errorf("failed to start process: %w", err)
-	}
-	childPid = cmd.Process.Pid
-
-	// ----------------------*/
-	// write tempData immediately
-	// -----------------------*/
-	tempData := types.TempData{
-		ParentPID:         e.Executor().Getpid(),
-		ChildPID:          childPid,
-		ConfigFile:        configFile,
-		Program:           program,
-		ProgramArgs:       pArgs,
-		Tag:               opts.Tag,
-		Imports:           opts.Imports,
-		WaitTimeout:       int64(opts.WaitTimeout),
-		HideWindow:        opts.HideWindow,
-		DeleterPath:       opts.DeleterPath,
-		DeleterHideWindow: opts.DeleterHideWindow,
-	}
-	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(tempData); err != nil {
-		tmpFile.Close()
-		return fmt.Errorf("failed to encode temp data: %w", err)
-	}
-	if _, err := tmpFile.Write(buf.Bytes()); err != nil {
-		tmpFile.Close()
-		return fmt.Errorf("failed to write temp file: %w", err)
-	}
-	if err := tmpFile.Sync(); err != nil {
-		tmpFile.Close()
-		return fmt.Errorf("failed to flush temp file: %w", err)
-	}
-	if err := tmpFile.Close(); err != nil {
-		return fmt.Errorf("failed to close temp file: %w", err)
 	}
 
 	e.Runtime.Logger().Info().
-		Int("ParentPID", tempData.ParentPID).
-		Int("ChildPID", tempData.ChildPID).
-		Str("ConfigFile", tempData.ConfigFile).
-		Str("Program", tempData.Program).
-		Strs("ProgramArgs", tempData.ProgramArgs).
-		Msg("temp file written")
+		Int("ParentPID", e.Executor().Getpid()).
+		Int("ChildPID", cmd.Process.Pid).
+		Str("Program", program).
+		Strs("ProgramArgs", pArgs).
+		Msg("process started")
 
-		// ----------------------*/
-		// Wait for process
-		// -----------------------*/
+	// ----------------------*/
+	// Wait for process
+	// -----------------------*/
 	if err := e.Executor().WaitProcess(cmd, opts.WaitTimeout); err != nil {
 		// Preserve the child's exit code so the CLI can exit with it.
 		var exitErr *types.ProcessExitError
