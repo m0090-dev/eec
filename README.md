@@ -284,6 +284,26 @@ ${} variable expansion and $() command substitution are supported in TOML, YAML,
 When a variable is defined as an array, its values are merged into (appended to) the existing variable rather than replacing it. For example, PATH = ["C:\\my\\bin"] appends to the current PATH, whereas PATH = "C:\\my\\bin" overwrites it entirely.
 
 
+### OS-Specific Sections
+
+Variables that only apply on one OS can be grouped under `[envs.windows]`, `[envs.linux]`, or `[envs.darwin]` (aliases: `win` for `windows`, `mac` / `macos` for `darwin`). The same nesting works in YAML and JSON. Only the section matching the current OS is applied, after the common `[envs]` entries, so OS-specific values override common ones and `${}` references work in both directions between common and OS-specific variables.
+
+```toml
+[envs]
+ROOT = "/opt/tools"
+
+[envs.windows]
+PATH = ["${ROOT}\\bin"]
+GREETING = "windows"
+
+[envs.linux]
+PATH = ["${ROOT}/bin"]
+GREETING = "linux"
+```
+
+Note: `windows`, `linux`, `darwin` (and their aliases) are reserved names directly under `envs` — when such a key holds a table it is treated as an OS section, not a variable. A reserved name holding a scalar (e.g. `windows = "x"`) is still treated as a regular variable.
+
+
 ### Variable Expansion
 
 Use `${}` to reference other environment variables within values. References are resolved via **topological sort**, so declaration order does not matter — forward references work fine.

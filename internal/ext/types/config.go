@@ -145,9 +145,71 @@ func sortedKeys(m map[string]interface{}) []string {
 	return keys
 }
 
+// canonicalOSName maps an [envs.<name>] sub-table name to a canonical
+// GOOS name, resolving aliases ("win" -> "windows", "mac"/"macos" ->
+// "darwin"). ok=false means the name is not a reserved OS name.
+func canonicalOSName(name string) (string, bool) {
+	switch strings.ToLower(name) {
+	case "windows", "win":
+		return "windows", true
+	case "linux":
+		return "linux", true
+	case "darwin", "mac", "macos":
+		return "darwin", true
+	}
+	return "", false
+}
+
+// toStringEnvMap converts a nested env table (an OS bucket value) into
+// map[string]interface{}; ok=false when v is not a map at all.
+func toStringEnvMap(v interface{}) (map[string]interface{}, bool) {
+	switch m := v.(type) {
+	case map[string]interface{}:
+		return m, true
+	case map[interface{}]interface{}:
+		out := make(map[string]interface{}, len(m))
+		for k, val := range m {
+			ks, ok := k.(string)
+			if !ok {
+				return nil, false
+			}
+			out[ks] = val
+		}
+		return out, true
+	}
+	return nil, false
+}
+
 func (c *Config) NormalizeEnvs(rt interfaces.Runtime) error {
 	if c.RawEnvs == nil {
 		return nil
+	}
+
+	// OS 別セクション ([envs.windows] 等) の受け皿。
+	// 予約名 + map 値のエントリは変数ではなく OS バケットとして集め、
+	// 現在の OS のものだけを共通エントリの後ろに付け足す。これにより
+	// SortEnvsByDependency の前に混ざるので、共通 <-> OS 別の相互参照が
+	// ${} で解決できる。予約名でも map でない値は通常の変数のまま。
+	currentOS, _ := canonicalOSName(rt.Env().GOOS())
+	buckets := make(map[string]map[string]interface{})
+	addVarOrBucket := func(key string, val interface{}) {
+		if key == "" {
+			return
+		}
+		if osName, reserved := canonicalOSName(key); reserved {
+			if vars, isMap := toStringEnvMap(val); isMap {
+				bucket, ok := buckets[osName]
+				if !ok {
+					bucket = make(map[string]interface{})
+					buckets[osName] = bucket
+				}
+				for _, k := range sortedKeys(vars) {
+					bucket[k] = vars[k]
+				}
+				return
+			}
+		}
+		c.Envs = append(c.Envs, Environ{Key: key, Value: val})
 	}
 
 	switch data := c.RawEnvs.(type) {
@@ -163,8 +225,7 @@ func (c *Config) NormalizeEnvs(rt interfaces.Runtime) error {
 
 			// A. 従来形式のチェック: - key: "NAME", value: "VAL"
 			if key, ok := m["key"].(string); ok && key != "" {
-				val := m["value"]
-				c.Envs = append(c.Envs, Environ{Key: key, Value: val})
+				addVarOrBucket(key, m["value"])
 				continue
 			}
 
@@ -173,9 +234,7 @@ func (c *Config) NormalizeEnvs(rt interfaces.Runtime) error {
 			// 回して最初の1つで break し、残りをランダムに落としていた）。
 			// 順序を決定的にするためキーをソートしてから追加する。
 			for _, k := range sortedKeys(m) {
-				if k != "" {
-					c.Envs = append(c.Envs, Environ{Key: k, Value: m[k]})
-				}
+				addVarOrBucket(k, m[k])
 			}
 		}
 
@@ -184,7 +243,7 @@ func (c *Config) NormalizeEnvs(rt interfaces.Runtime) error {
 		// map のイテレーション順はランダムなため、キーをソートして
 		// 決定的な順序にする（依存関係の最終順序は SortEnvsByDependency が決める）。
 		for _, k := range sortedKeys(data) {
-			c.Envs = append(c.Envs, Environ{Key: k, Value: data[k]})
+			addVarOrBucket(k, data[k])
 		}
 
 	case map[interface{}]interface{}:
@@ -196,11 +255,19 @@ func (c *Config) NormalizeEnvs(rt interfaces.Runtime) error {
 			}
 		}
 		for _, k := range sortedKeys(strMap) {
-			c.Envs = append(c.Envs, Environ{Key: k, Value: strMap[k]})
+			addVarOrBucket(k, strMap[k])
 		}
 	default:
 		// 想定外の型（文字列や数値などが直接 envs に指定された場合）
 		return fmt.Errorf("unsupported type for envs: %T (must be map or list)", c.RawEnvs)
+	}
+
+	// 現在の OS のバケットを共通エントリの後ろに追加する
+	// (後勝ちの通常処理で共通値を上書きできる)。
+	if vars, ok := buckets[currentOS]; ok {
+		for _, k := range sortedKeys(vars) {
+			c.Envs = append(c.Envs, Environ{Key: k, Value: vars[k]})
+		}
 	}
 	return nil
 }
