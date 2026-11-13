@@ -47,6 +47,21 @@ type ProgramData struct {
 type Environ struct {
 	Key   string      `toml:"key" yaml:"key" json:"key"`
 	Value interface{} `toml:"value" yaml:"value" json:"value"`
+	// Prepend is the merge mode for list values: false (default) keeps
+	// the historical append behavior (existing parts first, new parts
+	// appended); true — set for entries from a [envs.prepend] section —
+	// puts the new parts BEFORE the existing value. A scalar entry
+	// with Prepend=true is treated as a one-element prepend list.
+	Prepend bool `toml:"-" yaml:"-" json:"-"`
+	// Section records which [envs] sub-section defined the entry:
+	// "" for a plain [envs] entry, "append" for [envs.append] and
+	// "prepend" for [envs.prepend]. Used for display (tree badges).
+	Section string `toml:"-" yaml:"-" json:"-"`
+	// Origin records the OS section the entry came from: the canonical
+	// GOOS name ("windows" / "linux" / "darwin") for entries defined
+	// under [envs.<os>], "" for common entries. Used for display
+	// (tree badges).
+	Origin string `toml:"-" yaml:"-" json:"-"`
 }
 
 // extractDependencies は値の中から ${VAR} 形式の依存先を抽出します
@@ -80,17 +95,20 @@ func extractDependencies(val interface{}) []string {
 // ${} are defined before the variables that use them.
 //
 // caseInsensitive must reflect the target OS (see EnvKeysCaseInsensitive:
-// true on Windows, false elsewhere). When true, dependency matching and
-// de-duplication fold case ("Path" and "PATH" are the same variable);
-// when false, keys must match exactly, mirroring case-sensitive Unix
-// environments.
+// true on Windows, false elsewhere). When true, dependency matching
+// folds case ("Path" and "PATH" are the same variable); when false,
+// keys must match exactly, mirroring case-sensitive Unix environments.
+//
+// Duplicate keys are preserved: a config may define the same variable
+// several times (a plain [envs] entry plus [envs.append] /
+// [envs.prepend] entries, or a common entry plus an OS-section entry),
+// and every definition must reach BuildEnvs in order. (An earlier
+// version of this sort silently dropped all but the first definition
+// of a key.) A ${} reference to a duplicated key resolves against the
+// OTHER entries with that key; a variable whose only definition
+// references itself is still reported as a circular reference, as are
+// genuine cycles (A -> B -> A), with the chain included in the error.
 func (c *Config) SortEnvsByDependency(caseInsensitive bool) error {
-	canon := func(key string) string {
-		if caseInsensitive {
-			return strings.ToUpper(key)
-		}
-		return key
-	}
 	equalKey := func(a, b string) bool {
 		if caseInsensitive {
 			return strings.EqualFold(a, b)
@@ -98,48 +116,56 @@ func (c *Config) SortEnvsByDependency(caseInsensitive bool) error {
 		return a == b
 	}
 
-	resolved := make([]Environ, 0, len(c.Envs))
-	seen := make(map[string]bool)
+	n := len(c.Envs)
+	resolved := make([]Environ, 0, n)
+	emitted := make([]bool, n)
+	inStack := make([]bool, n)
 
-	var resolve func(e Environ, chain []string) error
-	resolve = func(e Environ, chain []string) error {
-		// 循環チェック: 現在の依存チェーンに自分が含まれていたら、
-		// 経路全体（例: A -> B -> A）を添えてエラーにする。
-		for _, link := range chain {
-			if equalKey(link, e.Key) {
-				full := append(append([]string{}, chain...), e.Key)
-				return fmt.Errorf("circular reference detected: %s", strings.Join(full, " -> "))
-			}
-		}
-		if seen[canon(e.Key)] {
+	var resolve func(i int, chain []string) error
+	resolve = func(i int, chain []string) error {
+		if emitted[i] {
 			return nil
 		}
+		if inStack[i] {
+			// 循環: 現在の解決スタック上に同じエントリがいる。
+			// 経路全体（例: A -> B -> A）を添えてエラーにする。
+			full := append(append([]string{}, chain...), c.Envs[i].Key)
+			return fmt.Errorf("circular reference detected: %s", strings.Join(full, " -> "))
+		}
+		inStack[i] = true
+		chain = append(chain, c.Envs[i].Key)
 
-		chain = append(chain, e.Key)
-
-		// 値から依存している変数名を取得
-		deps := extractDependencies(e.Value)
+		// 値から依存している変数名を取得し、依存先を先に解決する
+		deps := extractDependencies(c.Envs[i].Value)
 		for _, depKey := range deps {
-			// 設定ファイル内の他の変数に依存しているか確認
-			for _, other := range c.Envs {
-				if equalKey(other.Key, depKey) {
-					if err := resolve(other, chain); err != nil {
+			provided := false
+			for j := range c.Envs {
+				if j == i {
+					continue
+				}
+				if equalKey(c.Envs[j].Key, depKey) {
+					provided = true
+					if err := resolve(j, chain); err != nil {
 						return err
 					}
 				}
 			}
+			if !provided && equalKey(c.Envs[i].Key, depKey) {
+				// 自分以外に提供者がいない自己参照は循環として報告する
+				full := append(append([]string{}, chain...), c.Envs[i].Key)
+				return fmt.Errorf("circular reference detected: %s", strings.Join(full, " -> "))
+			}
 		}
 
-		seen[canon(e.Key)] = true
-		resolved = append(resolved, e)
+		inStack[i] = false
+		emitted[i] = true
+		resolved = append(resolved, c.Envs[i])
 		return nil
 	}
 
-	for _, e := range c.Envs {
-		if !seen[canon(e.Key)] {
-			if err := resolve(e, nil); err != nil {
-				return err
-			}
+	for i := range c.Envs {
+		if err := resolve(i, nil); err != nil {
+			return err
 		}
 	}
 
@@ -197,31 +223,66 @@ func (c *Config) NormalizeEnvs(rt interfaces.Runtime) error {
 		return nil
 	}
 
-	// OS 別セクション ([envs.windows] 等) の受け皿。
-	// 予約名 + map 値のエントリは変数ではなく OS バケットとして集め、
-	// 現在の OS のものだけを共通エントリの後ろに付け足す。これにより
-	// SortEnvsByDependency の前に混ざるので、共通 <-> OS 別の相互参照が
-	// ${} で解決できる。予約名でも map でない値は通常の変数のまま。
+	// セクション振り分けの受け皿。
+	//
+	// [envs] 直下には2種類の予約サブテーブルがある (どちらも「予約名 +
+	// map 値」のときだけセクションとして扱い、それ以外は通常の変数):
+	//   - OS セクション ([envs.windows] 等): 現在の OS のものだけを
+	//     共通エントリの後ろに付け足す。SortEnvsByDependency の前に
+	//     混ざるので、共通 <-> OS 別の相互参照が ${} で解決できる。
+	//   - マージセクション ([envs.prepend] / [envs.append]): リスト値の
+	//     マージ方向を指定する。OS セクションの中でも使える
+	//     ([envs.windows.prepend] 等)。
+	//
+	// 1スコープ (共通 or 1つの OS) の中では plain -> append -> prepend
+	// の順に flush する。スカラーの置換が先に起き、append が後ろに、
+	// prepend が前に来るので、3つを同じキーに併用しても素直な
+	// 「prepend ++ 本体 ++ append」の並びになる。
 	currentOS, _ := canonicalOSName(rt.Env().GOOS())
-	buckets := make(map[string]map[string]interface{})
+	common := &envSectionSet{}
+	osSets := make(map[string]*envSectionSet)
+	osSet := func(osName string) *envSectionSet {
+		set, ok := osSets[osName]
+		if !ok {
+			set = &envSectionSet{}
+			osSets[osName] = set
+		}
+		return set
+	}
+
+	// addToSet は1スコープ分のエントリを振り分ける。prepend / append の
+	// 予約名 + map 値はサブセクションとして展開し、それ以外は plain。
+	addToSet := func(set *envSectionSet, origin, key string, val interface{}) {
+		if section, reserved := mergeSectionName(key); reserved {
+			if vars, isMap := toStringEnvMap(val); isMap {
+				for _, k := range sortedKeys(vars) {
+					e := Environ{Key: k, Value: vars[k], Origin: origin, Section: section, Prepend: section == "prepend"}
+					if section == "prepend" {
+						set.prepends = append(set.prepends, e)
+					} else {
+						set.appends = append(set.appends, e)
+					}
+				}
+				return
+			}
+		}
+		set.plain = append(set.plain, Environ{Key: key, Value: val, Origin: origin})
+	}
+
 	addVarOrBucket := func(key string, val interface{}) {
 		if key == "" {
 			return
 		}
 		if osName, reserved := canonicalOSName(key); reserved {
 			if vars, isMap := toStringEnvMap(val); isMap {
-				bucket, ok := buckets[osName]
-				if !ok {
-					bucket = make(map[string]interface{})
-					buckets[osName] = bucket
-				}
+				set := osSet(osName)
 				for _, k := range sortedKeys(vars) {
-					bucket[k] = vars[k]
+					addToSet(set, osName, k, vars[k])
 				}
 				return
 			}
 		}
-		c.Envs = append(c.Envs, Environ{Key: key, Value: val})
+		addToSet(common, "", key, val)
 	}
 
 	switch data := c.RawEnvs.(type) {
@@ -274,14 +335,40 @@ func (c *Config) NormalizeEnvs(rt interfaces.Runtime) error {
 		return fmt.Errorf("unsupported type for envs: %T (must be map or list)", c.RawEnvs)
 	}
 
-	// 現在の OS のバケットを共通エントリの後ろに追加する
-	// (後勝ちの通常処理で共通値を上書きできる)。
-	if vars, ok := buckets[currentOS]; ok {
-		for _, k := range sortedKeys(vars) {
-			c.Envs = append(c.Envs, Environ{Key: k, Value: vars[k]})
-		}
+	// 共通スコープを flush し、現在の OS のスコープを後ろに追加する
+	// (後勝ちの通常処理で共通値を上書き・マージできる)。
+	flush := func(set *envSectionSet) {
+		c.Envs = append(c.Envs, set.plain...)
+		c.Envs = append(c.Envs, set.appends...)
+		c.Envs = append(c.Envs, set.prepends...)
+	}
+	flush(common)
+	if set, ok := osSets[currentOS]; ok {
+		flush(set)
 	}
 	return nil
+}
+
+// envSectionSet accumulates the entries of one scope (the common
+// [envs] table or one [envs.<os>] bucket), split by merge section so
+// NormalizeEnvs can flush them in plain -> append -> prepend order.
+type envSectionSet struct {
+	plain    []Environ
+	appends  []Environ
+	prepends []Environ
+}
+
+// mergeSectionName maps an [envs] sub-table name to its merge section
+// ("prepend" / "append"). ok=false means the name is not a reserved
+// merge-section name. Callers must only treat it as a section when
+// the value is a map; a variable literally named e.g. "prepend" with
+// a scalar or list value stays a regular variable.
+func mergeSectionName(name string) (string, bool) {
+	switch strings.ToLower(name) {
+	case "prepend", "append":
+		return strings.ToLower(name), true
+	}
+	return "", false
 }
 func (c *Config) NormalizeConfigs(rt interfaces.Runtime) error {
 	if c.RawConfigs == nil {
@@ -749,9 +836,31 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 		}
 
 		// 3. 既存値と展開後の新規値をマージして重複排除
-		existing := make(map[string]struct{})
 		merged := []string{}
-		if isListType {
+		if env.Prepend {
+			// prepend ([envs.prepend] 由来): 展開後の新しい値を前に、
+			// 既存値を後ろに並べる。重複は最初に現れた位置が勝つので、
+			// 既存値に含まれていた要素を prepend すると先頭へ移動する。
+			// スカラー値でも1要素の prepend リストとして扱う。
+			seen := make(map[string]struct{})
+			addParts := func(vals []string) {
+				for _, v := range vals {
+					for _, part := range strings.Split(v, separator) {
+						part = strings.TrimSpace(part)
+						if part == "" {
+							continue
+						}
+						if _, ok := seen[part]; !ok {
+							seen[part] = struct{}{}
+							merged = append(merged, part)
+						}
+					}
+				}
+			}
+			addParts(expandedValues)
+			addParts(envMap[canonKey])
+		} else if isListType {
+			existing := make(map[string]struct{})
 
 			// a) 既存の値を登録
 			for _, v := range envMap[canonKey] {

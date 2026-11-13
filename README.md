@@ -133,7 +133,7 @@ eec tag remove dev
 
 ### 6. `tree` — Display the dependency tree of a tag
 
-Visualizes the full dependency structure of a tag — which config files and sub-tags it pulls in — in a hierarchical tree format. Useful for auditing complex environments and spotting redundant or conflicting variable definitions.
+Visualizes the full dependency structure of a tag — which config files and sub-tags it pulls in — together with the value of every variable, so you can audit complex environments and spot redundant or conflicting definitions.
 
 ```bash
 eec tree dev
@@ -142,21 +142,47 @@ eec tree dev
 Example output:
 ```
 Dependency tree for tag: dev
-└── Imported tag: dev-base
-    └── Imported file: base-dev.toml
-        ├── Env: PATH
-        ├── Env: INCLUDE
-        └── Env: LIB
-└── Imported tag: dev-lang
-    ├── Imported file: go-dev.toml
-    ├── Imported file: rust-dev.toml
-    └── Imported file: python-dev.toml
-└── Imported tag: dev-tools
-    ├── Imported file: use-tools-dev.toml
-    └── Imported file: gnu-tools-dev.toml
+Program: cmd /k vcvars64.bat
+├── D:\dev\configs\base.toml
+│   ├── Config: base environment  [sep=';']
+│   ├── Env: GREETING = hello
+│   ├── Env: PATH = D:\tools\bin [list]
+│   ├── Env: PATH = D:\priority [prepend]
+│   └── Env: WINKEY = x [os: windows]
+└── Imported file: D:\dev\configs\extra.toml
+    ├── Env: SHARED = from-extra
+    └── Capture: setup-env.bat
+
+Overrides:
+SHARED
+  D:\dev\configs\base.toml: from-base
+  D:\dev\configs\extra.toml: from-extra
+  final: from-extra
+
+Summary: 2 config(s), 7 env definition(s), 1 override(s), 42 final variable(s)
 ```
 
-Duplicate environment variable warnings are also shown after the tree is printed.
+Reading the output:
+
+- Each config file is shown once by its **full path**; imported files and imported tags are nested under the tag that pulls them in. Files reached twice are marked `(already visited)`, imports that are neither a file nor a tag are marked `Unknown import`.
+- Env lines show the defined value. List values are joined with the list separator; values longer than 60 characters are truncated with `…` (use `--full` to print them whole). Badges mark how a definition merges: `[list]` for a plain list, `[append]` / `[prepend]` for merge-section entries, and `[os: windows]` (etc.) for OS-section entries.
+- After the tree, the **Overrides** section lists every variable defined more than once: the definition chain in resolution order (file → value) and the winning `final:` value. A **Summary** line counts configs, env definitions, overrides and final variables.
+- When writing to a terminal, file names are bold, keys are cyan, badges are yellow. Colors turn off automatically when output is piped, with `--no-color`, or when the `NO_COLOR` environment variable is set.
+
+To trace a single variable instead of printing the whole tree:
+
+```bash
+eec tree dev --key PATH
+```
+
+```
+PATH
+  D:\dev\configs\base.toml: D:\tools\bin [list]
+  D:\dev\configs\base.toml: D:\priority [prepend]
+  final: D:\priority;D:\tools\bin;C:\Windows
+```
+
+This prints only that variable's definition chain across the tag's configs, in resolution order, plus its fully resolved final value — handy for answering "why does PATH look like this?". The key lookup follows the OS case rules (case-insensitive on Windows). If the variable is not defined by the tag, the command exits with a non-zero status.
 
 ---
 
@@ -404,6 +430,38 @@ ${} variable expansion and $() command substitution are supported in TOML, YAML,
 
 
 When a variable is defined as an array, its values are merged into (appended to) the existing variable rather than replacing it. For example, PATH = ["C:\\my\\bin"] appends to the current PATH, whereas PATH = "C:\\my\\bin" overwrites it entirely.
+
+
+### Prepend and Append Sections
+
+By default a list value is **appended** after the existing value. The `[envs.prepend]` sub-table reverses that: its list values are merged **before** the existing value, so they win priority (for PATH-like variables, earlier entries are found first). `[envs.append]` is an explicit synonym for the plain list behavior.
+
+```toml
+[envs]
+PATH = ["tools"]               # appended
+
+[envs.prepend]
+PATH = ["priority-tools"]      # placed before everything else
+
+[envs.append]
+PATH = ["more-tools"]          # appended, like the plain list
+```
+
+For one variable, the merge order is:
+
+```
+[envs.prepend] parts  ++  existing value  ++  plain [envs] list parts  ++  [envs.append] parts
+```
+
+(with the config's scalar definition, if any, taking the place of the existing value at its step). Across multiple configs the same rule applies in config order: an earlier config's appends land before a later config's prepends are placed in front, so for configs processed in order the final value is `later-prepend ++ base ++ earlier-append`.
+
+Details:
+
+- Merging splits both sides on the list separator, trims whitespace, and removes duplicates — the **first** occurrence wins. Prepending a part that is already present therefore *moves it to the front* instead of duplicating it.
+- A scalar value inside `[envs.prepend]` is treated as a one-element prepend list.
+- `${}` / `$()` expansion in prepend values works exactly like in plain values.
+- The sections also nest inside OS sections: `[envs.windows.prepend]`, `[envs.linux.append]`, and so on.
+- `prepend` and `append` are reserved names directly under `envs` (and under OS sections) — when such a key holds a *table* it is treated as a section. A variable literally named `prepend` holding a scalar or a list (e.g. `prepend = ["x"]`) is still treated as a regular variable.
 
 
 ### OS-Specific Sections
