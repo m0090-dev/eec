@@ -3,6 +3,8 @@ package domain
 import (
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -77,9 +79,11 @@ func applyCaptures(rt interfaces.Runtime, allConfigs []types.Config, finalEnv []
 func runCaptureCommand(rt interfaces.Runtime, command string, env []string) ([]string, error) {
 	var name string
 	var args []string
+	var shellLine string
 	if rt.Env().GOOS() == "windows" {
 		name = "cmd"
-		args = []string{"/c", command + " & echo " + captureSentinel + " & set"}
+		shellLine = command + " & echo " + captureSentinel + " & set"
+		args = []string{"/c", shellLine}
 	} else {
 		name = "sh"
 		args = []string{"-c", command + "; echo " + captureSentinel + "; env -0"}
@@ -88,12 +92,18 @@ func runCaptureCommand(rt interfaces.Runtime, command string, env []string) ([]s
 	cmd, err := rt.Executor().Command(
 		name, args, env,
 		rt.Console().Stdin(),
-		nil, // stdout: nil so Output() captures it
+		nil, // stdout: nil here; outputWithTimeout attaches its capture pipe
 		rt.Console().Stderr(),
 		true, // suppress window (Windows)
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not start capture shell: %w", err)
+	}
+	if rt.Env().GOOS() == "windows" {
+		// Hand the composite line to cmd.exe verbatim: Go's default
+		// command-line escaping turns embedded quotes into \" which
+		// cmd cannot parse (a quoted capture command never ran).
+		general.UseRawCmdExeLine(cmd, shellLine)
 	}
 
 	out, runErr := outputWithTimeout(cmd, CaptureTimeout)
@@ -114,24 +124,67 @@ func runCaptureCommand(rt interfaces.Runtime, command string, env []string) ([]s
 	return captured, nil
 }
 
-// outputWithTimeout is cmd.Output() with a kill-on-timeout guard.
+// outputWithTimeout captures cmd's stdout with a kill-on-timeout
+// guard.
+//
+// Two concurrency traps shape this implementation:
+//
+//   - The process is started in this goroutine, never inside the
+//     helper goroutines: Start is what writes cmd.Process, and the
+//     timeout branch reads cmd.Process to kill it. Reading it while
+//     a background Cmd.Output() might still be inside Start is a
+//     data race.
+//   - Stdout is a real pipe file rather than a buffer. With a
+//     buffer, exec spawns a copy goroutine and Wait blocks until it
+//     finishes — which is only at pipe EOF, i.e. when EVERY holder
+//     of the write end exits. A killed shell whose child (say a
+//     `sleep`) inherited stdout would keep Wait blocked for the
+//     child's whole lifetime, defeating the timeout. With a file,
+//     Wait returns as soon as the shell itself dies; draining the
+//     pipe is our reader goroutine's job, and on the timeout path
+//     closing the read end unblocks it immediately.
+//
+// On the success path the reader runs until pipe EOF, so a
+// grandchild that inherits stdout and outlives the shell still
+// delays capture — the same semantics Cmd.Output() had, since its
+// Wait blocked on the copy goroutine in exactly the same way.
 func outputWithTimeout(cmd *exec.Cmd, timeout time.Duration) ([]byte, error) {
-	type result struct {
+	r, w, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	cmd.Stdout = w
+	if err := cmd.Start(); err != nil {
+		w.Close()
+		return nil, err
+	}
+	w.Close() // only the child holds the write end now
+
+	type readResult struct {
 		out []byte
 		err error
 	}
-	done := make(chan result, 1)
+	readDone := make(chan readResult, 1)
 	go func() {
-		out, err := cmd.Output()
-		done <- result{out, err}
+		out, err := io.ReadAll(r)
+		readDone <- readResult{out, err}
 	}()
+	waitDone := make(chan error, 1)
+	go func() { waitDone <- cmd.Wait() }()
+
 	select {
-	case r := <-done:
-		return r.out, r.err
-	case <-time.After(timeout):
-		if cmd.Process != nil {
-			_ = cmd.Process.Kill()
+	case werr := <-waitDone:
+		res := <-readDone
+		if werr != nil {
+			return res.out, werr
 		}
+		return res.out, res.err
+	case <-time.After(timeout):
+		_ = cmd.Process.Kill()
+		<-waitDone
+		r.Close() // unblock the reader; the output is discarded
+		<-readDone
 		return nil, fmt.Errorf("%w after %s", errCaptureTimeout, timeout)
 	}
 }
