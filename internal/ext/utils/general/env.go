@@ -109,7 +109,34 @@ func replaceVariables(rt interfaces.Runtime, input string, envMap any) string {
 		return match
 	})
 }
+
+// ExpandOptions controls which substitutions ExpandEnvAndCommands
+// performs. The zero value disables everything; use
+// DefaultExpandOptions for the historical behavior.
+type ExpandOptions struct {
+	// ExpandVars enables ${VAR} variable expansion. When false, the
+	// input is returned completely unexpanded.
+	ExpandVars bool
+	// ExecCommands enables $(cmd) command substitution. When false
+	// (and ExpandVars is true), ${} still expands but $() is left
+	// literal instead of being executed.
+	ExecCommands bool
+}
+
+// DefaultExpandOptions returns the historical behavior: both ${}
+// expansion and $() execution enabled.
+func DefaultExpandOptions() ExpandOptions {
+	return ExpandOptions{ExpandVars: true, ExecCommands: true}
+}
+
 func ExpandEnvAndCommands(rt interfaces.Runtime, input string, envMap any) string {
+	return ExpandEnvAndCommandsWithOptions(rt, input, envMap, DefaultExpandOptions())
+}
+
+func ExpandEnvAndCommandsWithOptions(rt interfaces.Runtime, input string, envMap any, opts ExpandOptions) string {
+	if !opts.ExpandVars {
+		return input
+	}
 	result := replaceVariables(rt, input, envMap)
 	// --------------------------------------------------
 	// 1. 環境変数の展開: ${VAR} (Regex で OK)
@@ -130,6 +157,14 @@ func ExpandEnvAndCommands(rt interfaces.Runtime, input string, envMap any) strin
 			if nextIdx != -1 {
 				// 抽出したコマンドラインを Executor 経由で実行
 				cmdLine := strings.TrimSpace(content)
+				if !opts.ExecCommands {
+					// 実行せず、$(...) をリテラルのまま残す
+					rt.Logger().Warn().Str("command", cmdLine).
+						Msg("command substitution skipped: exec_commands is disabled")
+					sb.WriteString(string(runes[i : nextIdx+1]))
+					i = nextIdx // 閉じ括弧までスキップ
+					continue
+				}
 				// 再帰的に中身を展開 (例: $(echo $(date)) の内側を先に解決)
 				//expandedCmdLine := ExpandEnvAndCommands(env, fs, exec, console, cmdLine, envMap)
 				expandedCmdLine := replaceVariables(rt, cmdLine, envMap)

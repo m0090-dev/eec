@@ -51,6 +51,8 @@ eec run -c test.toml -p powershell -a "-NoExit","-Command","Write-Output 'hello 
 | `--hide-window` | Launch the program without a visible window |
 | `--duplicate-strict` | Treat duplicate environment variable definitions as an error |
 | `--duplicate-no-warn` | Suppress warnings for duplicate environment variables |
+| `--no-expand` | Disable `${}` variable expansion (also available on `dump`) |
+| `--no-exec` | Disable `$()` command substitution, leaving it literal (also available on `dump`) |
 | `-v`, `--verbose` | Enable debug logging |
 
 **Run using a tag:**
@@ -330,6 +332,25 @@ GIT_HASH   = "$(git rev-parse --short HEAD)"
 ```
 
 Both `${}` and `$()` can be combined freely in a single value.
+
+### Disabling Expansion and Command Substitution
+
+Expansion can be turned off per config in the `[configs]` section, or per invocation with CLI flags (the flags win). When several configs are merged, the last config that specifies a toggle wins.
+
+```toml
+[configs]
+expand_vars = false    # ${} (and $()) are left completely unexpanded
+exec_commands = false  # ${} still expands, but $() is left literal instead of being executed
+```
+
+| Where | Setting | Effect |
+|---|---|---|
+| `[configs]` | `expand_vars = false` | No substitution at all; values are used verbatim |
+| `[configs]` | `exec_commands = false` | `${}` expands; `$()` stays literal and is never executed |
+| CLI (`run` / `dump`) | `--no-expand` | Force-disables expansion regardless of the config |
+| CLI (`run` / `dump`) | `--no-exec` | Force-disables `$()` execution regardless of the config |
+
+This is useful when consuming configs you do not fully trust (a `$()` runs a shell command) or when values must contain literal `${}` / `$()` text.
 
 ---
 

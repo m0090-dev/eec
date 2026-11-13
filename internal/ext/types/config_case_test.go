@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/m0090-dev/eec/internal/ext/types"
+	"github.com/m0090-dev/eec/internal/ext/utils/general"
 )
 
 // Phase 3-1: OS-aware env key case handling.
@@ -56,7 +57,7 @@ func TestBuildEnvs_Linux_PreservesCaseAndKeepsVarsSeparate(t *testing.T) {
 		{Key: "HTTP_PROXY", Value: "http://upper"},
 		{Key: "USES", Value: "${http_proxy}"},
 	}}
-	out := envSliceToMap(cfg.BuildEnvs(rt, []string{"MiXeD=base"}, ":"))
+	out := envSliceToMap(cfg.BuildEnvs(rt, []string{"MiXeD=base"}, ":", general.DefaultExpandOptions()))
 
 	if got := out["http_proxy"]; got != "http://lower" {
 		t.Errorf("http_proxy = %q, want %q (case must be preserved)", got, "http://lower")
@@ -82,7 +83,7 @@ func TestBuildEnvs_Windows_PathAndPATHCollide(t *testing.T) {
 		{Key: "PATH", Value: []interface{}{`C:\tools`}},
 		{Key: "Ref", Value: "${Path}"},
 	}}
-	out := envSliceToMap(cfg.BuildEnvs(rt, []string{`Path=C:\base`}, ";"))
+	out := envSliceToMap(cfg.BuildEnvs(rt, []string{`Path=C:\base`}, ";", general.DefaultExpandOptions()))
 
 	merged, ok := out["PATH"]
 	if !ok {

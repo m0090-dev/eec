@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/m0090-dev/eec/internal/ext/types"
+	"github.com/m0090-dev/eec/internal/ext/utils/general"
 )
 
 // Phase 3-2: OS-specific env sections ([envs.windows] / [envs.linux] /
@@ -65,7 +66,7 @@ func TestOSSections_Toml_LinuxRuntime(t *testing.T) {
 	}
 	// OS-specific FINAL must win over nothing/common and reference the
 	// common SHARED var: after build it resolves through the common one.
-	out := envSliceToMap(cfg.BuildEnvs(rt, nil, ":"))
+	out := envSliceToMap(cfg.BuildEnvs(rt, nil, ":", general.DefaultExpandOptions()))
 	if out["FINAL"] != "linux:common-shared" {
 		t.Errorf("FINAL = %q, want %q (OS bucket referencing common var)", out["FINAL"], "linux:common-shared")
 	}
@@ -85,7 +86,7 @@ func TestOSSections_Toml_WindowsRuntime(t *testing.T) {
 	if _, ok := vars["LINUX_ONLY"]; ok {
 		t.Errorf("linux bucket leaked into windows config: %v", vars)
 	}
-	out := envSliceToMap(cfg.BuildEnvs(rt, nil, ";"))
+	out := envSliceToMap(cfg.BuildEnvs(rt, nil, ";", general.DefaultExpandOptions()))
 	if out["FINAL"] != "win:common-shared" {
 		t.Errorf("FINAL = %q, want %q", out["FINAL"], "win:common-shared")
 	}
@@ -136,7 +137,7 @@ OSDIR = "${ROOT}/linux"
 	if err != nil {
 		t.Fatalf("ReadToml: %v", err)
 	}
-	out := envSliceToMap(cfg.BuildEnvs(rt, nil, ":"))
+	out := envSliceToMap(cfg.BuildEnvs(rt, nil, ":", general.DefaultExpandOptions()))
 	if out["FROM_OS"] != "/opt/linux/bin" {
 		t.Errorf("FROM_OS = %q, want %q", out["FROM_OS"], "/opt/linux/bin")
 	}

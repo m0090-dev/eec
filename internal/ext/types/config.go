@@ -27,6 +27,12 @@ type Config struct {
 type MetaConfig struct {
 	Separator   string `toml:"separator" yaml:"separator" json:"separator"`
 	Description string `toml:"description" yaml:"description" json:"description"`
+	// ExpandVars / ExecCommands are tri-state toggles for ${} expansion
+	// and $() command substitution: nil means "not specified here"
+	// (inherit / default true), a non-nil value sets the behavior.
+	// When several configs are merged, the last non-nil value wins.
+	ExpandVars   *bool `toml:"expand_vars" yaml:"expand_vars" json:"expand_vars"`
+	ExecCommands *bool `toml:"exec_commands" yaml:"exec_commands" json:"exec_commands"`
 }
 type ProgramData struct {
 	Path string   `toml:"path" yaml:"path" json:"path"`
@@ -311,6 +317,14 @@ func mapToMetaConfig(m map[string]interface{}) MetaConfig {
 	if d, ok := m["description"].(string); ok {
 		mc.Description = d
 	}
+	if b, ok := m["expand_vars"].(bool); ok {
+		v := b
+		mc.ExpandVars = &v
+	}
+	if b, ok := m["exec_commands"].(bool); ok {
+		v := b
+		mc.ExecCommands = &v
+	}
 	return mc
 }
 
@@ -549,7 +563,11 @@ func ReadInlineYaml(rt interfaces.Runtime, yamlData string) (Config, error) {
 
 }
 
-func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator string) []string {
+// BuildEnvs resolves the config's envs on top of baseEnv. opts
+// controls ${} expansion and $() execution (see
+// general.ExpandOptions; use general.DefaultExpandOptions for the
+// historical behavior).
+func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator string, opts general.ExpandOptions) []string {
 
 	// Description 出力とセパレータ決定ロジック（中略）
 	for _, cfgs := range c.Configs {
@@ -624,7 +642,7 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 		var expandedValues []string
 		for _, raw := range rawStrings {
 			// この時点の envMap には直前のループの結果が入っている
-			expanded := general.ExpandEnvAndCommands(rt, raw, envMap)
+			expanded := general.ExpandEnvAndCommandsWithOptions(rt, raw, envMap, opts)
 			expandedValues = append(expandedValues, expanded)
 		}
 

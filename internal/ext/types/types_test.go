@@ -3,6 +3,7 @@ package types_test
 import (
 	"github.com/m0090-dev/eec/internal/ext/interfaces"
 	"github.com/m0090-dev/eec/internal/ext/types"
+	"github.com/m0090-dev/eec/internal/ext/utils/general"
 	"io"
 	"os"
 	"os/exec"
@@ -253,7 +254,7 @@ func TestConfig_BuildEnvs(t *testing.T) {
 	}
 
 	// Linux 環境を想定
-	newEnv := cfg.BuildEnvs(rt, []string{"EXISTING=val"}, ":")
+	newEnv := cfg.BuildEnvs(rt, []string{"EXISTING=val"}, ":", general.DefaultExpandOptions())
 
 	res := make(map[string]string)
 	for _, e := range newEnv {

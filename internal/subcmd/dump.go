@@ -16,6 +16,8 @@ var tagDumpFlag string
 var importsDumpFlag []string
 var separatorDumpFlag string
 var shellDumpFlag string
+var noExpandDumpFlag bool
+var noExecDumpFlag bool
 
 func dump() {
 	e := core.NewEngine(nil)
@@ -29,6 +31,8 @@ func dump() {
 		Imports:          importsDumpFlag,
 		Separator:        separatorDumpFlag,
 		WaitTimeout:      time.Duration(0),
+		NoExpand:         noExpandDumpFlag,
+		NoExec:           noExecDumpFlag,
 	}
 	if err := e.Dump(opts, shellDumpFlag); err != nil {
 		e.Runtime.Logger().Fatal().Err(err).Msg("Failed to dump")
@@ -65,6 +69,8 @@ func init() {
 	dumpCmd.Flags().StringSliceVarP(&importsDumpFlag, "import", "i", []string{}, "Import config files")
 	dumpCmd.Flags().StringVarP(&separatorDumpFlag, "separator", "s", "", "Separator value")
 	dumpCmd.Flags().StringVar(&shellDumpFlag, "shell", "", "Output format: unix (export KEY=VALUE) or win (set KEY=VALUE)")
+	dumpCmd.Flags().BoolVar(&noExpandDumpFlag, "no-expand", false, "Disable ${} variable expansion")
+	dumpCmd.Flags().BoolVar(&noExecDumpFlag, "no-exec", false, "Disable $() command substitution (left literal)")
 
 	rootCmd.AddCommand(dumpCmd)
 }

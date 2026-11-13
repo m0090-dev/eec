@@ -3,7 +3,34 @@ package domain
 import "fmt"
 import "github.com/m0090-dev/eec/internal/ext/types"
 import "github.com/m0090-dev/eec/internal/ext/interfaces"
+import "github.com/m0090-dev/eec/internal/ext/utils/general"
 import "path/filepath"
+
+// resolveExpandOptions computes the effective expansion options for a
+// run: defaults are both enabled; each config's [configs] expand_vars /
+// exec_commands overrides the previous value when specified (later
+// configs win, like env vars); the CLI NoExpand / NoExec flags then
+// force-disable.
+func resolveExpandOptions(allConfigs []types.Config, opts types.RunOptions) general.ExpandOptions {
+	eo := general.DefaultExpandOptions()
+	for _, cfg := range allConfigs {
+		for _, mc := range cfg.Configs {
+			if mc.ExpandVars != nil {
+				eo.ExpandVars = *mc.ExpandVars
+			}
+			if mc.ExecCommands != nil {
+				eo.ExecCommands = *mc.ExecCommands
+			}
+		}
+	}
+	if opts.NoExpand {
+		eo.ExpandVars = false
+	}
+	if opts.NoExec {
+		eo.ExecCommands = false
+	}
+	return eo
+}
 
 // ResolveRunOptions は戻り値に []types.Config (allConfigs) を追加。
 func ResolveRunOptions(
@@ -60,7 +87,9 @@ func ResolveRunOptions(
 	if inlineErr != nil {
 		return "", "", nil, nil, nil, fmt.Errorf("failed to parse inline config: %w", inlineErr)
 	}
-	if inlineCfg.RawEnvs != nil || inlineCfg.Program.Path != "" {
+	// envs/program が無くても、[configs] のトグル (expand_vars /
+	// exec_commands) だけを持つ inline 設定は取り込む。
+	if isConfigPresent(inlineCfg) {
 		allConfigs = append(allConfigs, inlineCfg)
 		if inlineCfg.Program.Path != "" && opts.Program == "" {
 			program = inlineCfg.Program.Path
@@ -88,9 +117,10 @@ func ResolveRunOptions(
 		programArgs = config.Program.Args
 	}
 
+	expandOpts := resolveExpandOptions(allConfigs, opts)
 	finalEnv = rt.Env().Environ()
 	for _, cfg := range allConfigs {
-		finalEnv = cfg.BuildEnvs(rt, finalEnv, opts.Separator)
+		finalEnv = cfg.BuildEnvs(rt, finalEnv, opts.Separator, expandOpts)
 	}
 
 	return configFile, program, programArgs, finalEnv, allConfigs, nil
