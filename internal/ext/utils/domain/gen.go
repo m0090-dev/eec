@@ -117,15 +117,14 @@ func GenUnixSimpleTagUtilsScript(tagName string) string {
 }
 
 func GenUtilsScript(rt interfaces.Runtime, outputDir string, clean bool) {
-	homeDir, _ := rt.Env().UserHomeDir()
-	if homeDir == "" {
+	tagDir := types.ResolveDataDir(rt)
+	if tagDir == "" {
 		return
 	}
 	scriptDir := outputDir
 	if scriptDir == "" {
 		scriptDir = filepath.Join(types.DEFAULT_SCRIPT_DIR, types.DEFAULT_UTILS_SCRIPT_DIR)
 	}
-	tagDir := filepath.Join(homeDir, types.DEFAULT_TAG_DIR)
 	tagFileLists, _ := general.GetFilesWithExtension(tagDir, ".tag")
 	tagNameLists := general.RemoveExtensions(general.BaseSlice(tagFileLists))
 	rt.Logger().Debug().

@@ -23,6 +23,12 @@ type Config struct {
 	Envs       []Environ    `toml:"-" yaml:"-" json:"-"`
 	Program    ProgramData  `toml:"program" yaml:"program" json:"program"`
 	SourcePath string       `json:"-" yaml:"-" toml:"-"`
+	// RawCapture holds the [capture] section: either a table with a
+	// "commands" list or a plain list of command strings. The commands
+	// are generic shell commands whose resulting environment is merged
+	// into the final env (see NormalizeCapture and domain capture).
+	RawCapture      interface{} `toml:"capture" yaml:"capture" json:"capture"`
+	CaptureCommands []string    `toml:"-" yaml:"-" json:"-"`
 }
 type MetaConfig struct {
 	Separator   string `toml:"separator" yaml:"separator" json:"separator"`
@@ -308,6 +314,64 @@ func (c *Config) NormalizeConfigs(rt interfaces.Runtime) error {
 	return nil
 }
 
+// NormalizeCapture flattens the [capture] section into
+// c.CaptureCommands. Accepted forms:
+//
+//	[capture]
+//	commands = ["setup-env.bat", "scripts/more.bat"]
+//
+//	capture = ["setup-env.sh"]   (plain list form)
+//
+//	capture = "setup-env.sh"     (single command)
+func (c *Config) NormalizeCapture() error {
+	if c.RawCapture == nil {
+		return nil
+	}
+	add := func(v interface{}) {
+		if s, ok := v.(string); ok && s != "" {
+			c.CaptureCommands = append(c.CaptureCommands, s)
+		}
+	}
+	addList := func(list []interface{}) {
+		for _, item := range list {
+			add(item)
+		}
+	}
+
+	switch data := c.RawCapture.(type) {
+	case map[string]interface{}:
+		if list, ok := data["commands"].([]interface{}); ok {
+			addList(list)
+		} else if s, ok := data["commands"].(string); ok {
+			add(s)
+		}
+	case map[interface{}]interface{}:
+		// YAML 用互換性
+		m := make(map[string]interface{}, len(data))
+		for k, v := range data {
+			if strKey, ok := k.(string); ok {
+				m[strKey] = v
+			}
+		}
+		if list, ok := m["commands"].([]interface{}); ok {
+			addList(list)
+		} else if s, ok := m["commands"].(string); ok {
+			add(s)
+		}
+	case []interface{}:
+		addList(data)
+	case []string:
+		for _, s := range data {
+			add(s)
+		}
+	case string:
+		add(data)
+	default:
+		return fmt.Errorf("unsupported type for capture: %T (must be a list of commands or a table with a commands list)", c.RawCapture)
+	}
+	return nil
+}
+
 // 補助関数: map から MetaConfig 構造体に変換
 func mapToMetaConfig(m map[string]interface{}) MetaConfig {
 	var mc MetaConfig
@@ -379,7 +443,7 @@ func ReadInlineConfig(rt interfaces.Runtime, content string, format string) (Con
 		// B. TOML: 構造が厳格なので YAML より先に試す
 		if err = toml.Unmarshal([]byte(content), &cfg); err == nil {
 			// TOMLとして受理されても、中身が全くパースできていない(空の)場合は次へ
-			if cfg.RawEnvs != nil || len(cfg.Configs) > 0 || cfg.Program.Path != "" {
+			if cfg.RawEnvs != nil || len(cfg.Configs) > 0 || cfg.Program.Path != "" || cfg.RawCapture != nil {
 				goto PARSED
 			}
 		}
@@ -405,6 +469,9 @@ PARSED:
 	if err := cfg.NormalizeEnvs(rt); err != nil {
 		return Config{}, fmt.Errorf("normalize error: %w", err)
 	}
+	if err := cfg.NormalizeCapture(); err != nil {
+		return Config{}, fmt.Errorf("normalize capture error: %w", err)
+	}
 
 	if err := cfg.SortEnvsByDependency(EnvKeysCaseInsensitive(rt.Env().GOOS())); err != nil {
 		return Config{}, fmt.Errorf("dependency sort error: %w", err)
@@ -427,6 +494,9 @@ func ReadJson(rt interfaces.Runtime, fileName string) (Config, error) {
 			return Config{}, err
 		}
 		if err := config.NormalizeEnvs(rt); err != nil {
+			return Config{}, err
+		}
+		if err := config.NormalizeCapture(); err != nil {
 			return Config{}, err
 		}
 		if err := config.SortEnvsByDependency(EnvKeysCaseInsensitive(rt.Env().GOOS())); err != nil {
@@ -452,6 +522,9 @@ func ReadYaml(rt interfaces.Runtime, fileName string) (Config, error) {
 		if err := config.NormalizeEnvs(rt); err != nil {
 			return Config{}, err
 		}
+		if err := config.NormalizeCapture(); err != nil {
+			return Config{}, err
+		}
 		if err := config.SortEnvsByDependency(EnvKeysCaseInsensitive(rt.Env().GOOS())); err != nil {
 			return Config{}, err
 		}
@@ -475,6 +548,9 @@ func ReadToml(rt interfaces.Runtime, fileName string) (Config, error) {
 			return Config{}, err
 		}
 		if err := config.NormalizeEnvs(rt); err != nil {
+			return Config{}, err
+		}
+		if err := config.NormalizeCapture(); err != nil {
 			return Config{}, err
 		}
 		if err := config.SortEnvsByDependency(EnvKeysCaseInsensitive(rt.Env().GOOS())); err != nil {
@@ -609,6 +685,29 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 		}
 	}
 
+	// 組み込み変数 (Phase 4): 展開専用・最低優先度で envMap に seed する。
+	//   CONFIG_DIR: この設定ファイルのあるディレクトリ。SourcePath が
+	//     空 (inline 設定など) のときは定義しない。
+	//   EEC_HOME:   解決済みデータディレクトリ (ResolveDataDir)。
+	// baseEnv に同名キーがある場合はそちらが勝つ。設定ファイル自身が
+	// 同名キーを定義した場合は builtin 扱いをやめ、通常の変数として
+	// 出力する (下のループで hidden から外す)。
+	hiddenBuiltins := make(map[string]bool)
+	builtins := make(map[string]string)
+	if c.SourcePath != "" {
+		builtins["CONFIG_DIR"] = filepath.Dir(c.SourcePath)
+	}
+	if dataDir := ResolveDataDir(rt); dataDir != "" {
+		builtins["EEC_HOME"] = dataDir
+	}
+	for name, val := range builtins {
+		canon := CanonicalEnvKey(goos, name)
+		if _, exists := envMap[canon]; !exists {
+			envMap[canon] = []string{val}
+			hiddenBuiltins[canon] = true
+		}
+	}
+
 	// c.Envs (設定ファイルの envs) を処理
 	for _, env := range c.Envs {
 		if env.Key == "" {
@@ -616,6 +715,9 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 			continue
 		}
 		canonKey := CanonicalEnvKey(goos, env.Key)
+		// 設定自身が組み込み変数と同名キーを定義したら、そちらが
+		// builtin を上書きし、通常の変数として出力対象になる。
+		delete(hiddenBuiltins, canonKey)
 
 		// 1. まず「生の値 (raw)」をスライスとして取り出す
 		var rawStrings []string
@@ -684,9 +786,14 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 		envMap[canonKey] = merged
 	}
 
-	// map を []string に変換して返す
+	// map を []string に変換して返す。
+	// 展開専用の組み込み変数は、baseEnv / 設定のどちらでも実定義
+	// されなかった限り最終環境には混ぜない。
 	newEnv := make([]string, 0, len(envMap))
 	for k, v := range envMap {
+		if hiddenBuiltins[k] {
+			continue
+		}
 		joined := strings.Join(v, separator)
 		newEnv = append(newEnv, k+"="+joined)
 	}

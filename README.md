@@ -217,6 +217,18 @@ logMode:     release
 
 ---
 
+## Data Directory: `EEC_HOME` and Portable Mode
+
+Tags are stored in eec's data directory, which is resolved in this order:
+
+1. **`EEC_HOME`** environment variable — its value *is* the data directory itself (the equivalent of `~/.eec`).
+2. **Portable mode** — if a `.eec` directory exists next to the `eec` executable, it is used. A portable folder or removable drive can therefore carry both the binary and its tags, leaving no state on the host machine.
+3. **`~/.eec`** — the default.
+
+When a tag references config files that live *inside* the data directory, the paths are stored **relative to the data directory** instead of absolute. Such tags keep working when the data directory moves — for example when a portable drive shows up under a different drive letter. Absolute paths outside the data directory are stored (and resolved) exactly as before.
+
+---
+
 ## Configuration File Format
 
 Config files can be written in TOML, YAML, JSON, or .env format.
@@ -351,6 +363,42 @@ exec_commands = false  # ${} still expands, but $() is left literal instead of b
 | CLI (`run` / `dump`) | `--no-exec` | Force-disables `$()` execution regardless of the config |
 
 This is useful when consuming configs you do not fully trust (a `$()` runs a shell command) or when values must contain literal `${}` / `$()` text.
+
+### Built-in Variables
+
+Two built-in variables are available for `${}` expansion in config values:
+
+| Variable | Value |
+|---|---|
+| `${CONFIG_DIR}` | The directory containing the config file being processed. Not defined for inline configs. |
+| `${EEC_HOME}` | The resolved data directory (see [Data Directory](#data-directory-eec_home-and-portable-mode)). |
+
+```toml
+[envs]
+TOOLS = "${CONFIG_DIR}/tools"
+PATH  = ["${TOOLS}/bin"]
+```
+
+Built-ins have the **lowest priority**: a value from the real environment or a variable defined in the config itself wins over the built-in of the same name. They are also **expansion-only** — they never appear in the final environment unless the real environment or the config actually defines them.
+
+### Capturing an Environment from a Script (`[capture]`)
+
+Some tools ship a script whose whole job is to set up environment variables (a compiler toolchain's setup batch file, an SDK's environment script, and so on). The generic `[capture]` section runs such commands and imports the environment they produce — no tool-specific support is involved:
+
+```toml
+[capture]
+commands = ["C:\\path\\to\\setup-env.bat"]
+```
+
+A plain list form (`capture = ["..."]`) works too, in TOML, YAML, and JSON. After the config's own `[envs]` are resolved, each command runs in order through the OS shell on top of the current environment, and the resulting environment is diffed back in:
+
+- variables the command **added or changed** replace the old values wholesale (a captured `PATH` replaces `PATH` entirely),
+- variables the command **removed** disappear,
+- everything else is left untouched.
+
+`${}` in a command string is expanded against the current environment first. Captures run arbitrary shell commands, so they obey the same gate as `$()`: when `exec_commands` is disabled (config or `--no-exec`), captures are skipped with a warning. Each capture has a 60-second timeout.
+
+> **Caveats:** On Windows, a `.bat` file runs inside the `cmd` process, so a plain path in `commands` is enough (for example, a toolchain setup script such as `vcvars64.bat` works this way — it is just an ordinary batch file as far as eec is concerned). On Unix, the command must run *in the capture shell itself*, so source your script: `commands = [". \"/path/to/setup-env.sh\""]`.
 
 ---
 
