@@ -1,6 +1,7 @@
 package domain_test
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -103,7 +104,17 @@ B = "${A}-x"
 // exec, an inline config appended afterwards re-enables it (and the
 // reverse direction too).
 func TestResolveRunOptions_LaterConfigOverridesEarlierToggle(t *testing.T) {
-	const path = "/mock/main.toml"
+	// ResolveRunOptions rewrites ConfigFile with filepath.Abs before
+	// it consults the FS, so the mock FS must register the file under
+	// that same normalized key. A Unix-style "/mock/main.toml" is NOT
+	// absolute on Windows (it has no volume name): Abs supplies the
+	// current drive there ("C:\mock\main.toml"), the un-normalized key
+	// would miss, and the main config would silently be skipped —
+	// leaving B undefined and both sub-cases testing nothing.
+	path, err := filepath.Abs("/mock/main.toml")
+	if err != nil {
+		t.Fatal(err)
+	}
 	fileWith := func(execCmd string) *mockRuntime {
 		rt := newMockRuntime()
 		rt.fs.existingFiles[path] = true
@@ -117,6 +128,9 @@ func TestResolveRunOptions_LaterConfigOverridesEarlierToggle(t *testing.T) {
 		ConfigFile:       path,
 		InlineConfigToml: "[configs]\nexec_commands = true\n",
 	})
+	if _, ok := env["B"]; !ok {
+		t.Fatal("B is not defined; the main config file was not loaded")
+	}
 	if env["B"] == "$(echo nope)" {
 		t.Error("B stayed literal; the later exec_commands=true should have re-enabled execution")
 	}
@@ -126,6 +140,9 @@ func TestResolveRunOptions_LaterConfigOverridesEarlierToggle(t *testing.T) {
 		ConfigFile:       path,
 		InlineConfigToml: "[configs]\nexec_commands = false\n",
 	})
+	if _, ok := env["B"]; !ok {
+		t.Fatal("B is not defined; the main config file was not loaded")
+	}
 	if env["B"] != "$(echo nope)" {
 		t.Errorf("B = %q, want literal %q (later exec_commands=false wins)", env["B"], "$(echo nope)")
 	}
