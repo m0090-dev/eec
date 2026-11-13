@@ -310,6 +310,9 @@ func (e *Engine) TagList() error {
 
 func (e *Engine) TagRemove(name string) error {
 	tagName := name
+	if err := types.ValidateTagName(tagName); err != nil {
+		return err
+	}
 	homeDir, err := e.Env().UserHomeDir()
 	if homeDir == "" {
 		e.Runtime.Logger().Error().Err(err).Msg(fmt.Sprintf("homeDir(%s)が設定されていません", homeDir))

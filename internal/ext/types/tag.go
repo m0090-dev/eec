@@ -16,10 +16,29 @@ type TagData struct {
 	ImportConfigFiles []string `json:"import_config_files"`
 }
 
+// ValidateTagName rejects tag names that could escape the tag
+// directory once they are turned into a file path ("%s.tag").
+// Empty names, path separators and ".." are not allowed.
+func ValidateTagName(tagName string) error {
+	if tagName == "" {
+		return fmt.Errorf("tag name must not be empty")
+	}
+	if strings.Contains(tagName, "..") {
+		return fmt.Errorf("invalid tag name %q: must not contain '..'", tagName)
+	}
+	if strings.ContainsAny(tagName, "/\\") {
+		return fmt.Errorf("invalid tag name %q: must not contain path separators", tagName)
+	}
+	return nil
+}
+
 // ---------------------------
 // TagData JSON 保存処理
 // ---------------------------
 func (t *TagData) Write(rt interfaces.Runtime, tagName string) error {
+	if err := ValidateTagName(tagName); err != nil {
+		return err
+	}
 	homeDir, err := rt.Env().UserHomeDir()
 	if homeDir == "" {
 		return err
@@ -54,6 +73,9 @@ func (t *TagData) Write(rt interfaces.Runtime, tagName string) error {
 // 読み取り処理
 // --------------------------
 func ReadTagData(rt interfaces.Runtime, tagName string) (TagData, error) {
+	if err := ValidateTagName(tagName); err != nil {
+		return TagData{}, err
+	}
 	homeDir, _ := rt.Env().UserHomeDir()
 	if homeDir == "" {
 		return TagData{}, fmt.Errorf("home dir not set")
