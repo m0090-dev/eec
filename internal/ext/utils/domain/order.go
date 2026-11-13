@@ -1,5 +1,6 @@
 package domain
 
+import "fmt"
 import "github.com/m0090-dev/eec/internal/ext/types"
 import "github.com/m0090-dev/eec/internal/ext/interfaces"
 import "path/filepath"
@@ -56,7 +57,10 @@ func ResolveRunOptions(
 	}
 
 	inlineCfg, inlineErr := resolveInlineFromOptions(opts, rt)
-	if inlineErr == nil && (inlineCfg.RawEnvs != nil || inlineCfg.Program.Path != "") {
+	if inlineErr != nil {
+		return "", "", nil, nil, nil, fmt.Errorf("failed to parse inline config: %w", inlineErr)
+	}
+	if inlineCfg.RawEnvs != nil || inlineCfg.Program.Path != "" {
 		allConfigs = append(allConfigs, inlineCfg)
 		if inlineCfg.Program.Path != "" && opts.Program == "" {
 			program = inlineCfg.Program.Path
