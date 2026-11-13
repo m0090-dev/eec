@@ -70,7 +70,7 @@ func applyCaptures(rt interfaces.Runtime, allConfigs []types.Config, finalEnv []
 // runCaptureCommand runs command through the OS shell with env and
 // returns the FULL environment in effect after the command finishes.
 //
-//	Windows: cmd /c "<cmd> & echo <sentinel> & set"
+//	Windows: cmd /c "<cmd>& echo <sentinel> & set"
 //	Unix:    sh -c "<cmd>; echo <sentinel>; env -0"
 //
 // On Unix the command runs in the capture shell itself, so it must
@@ -82,7 +82,11 @@ func runCaptureCommand(rt interfaces.Runtime, command string, env []string) ([]s
 	var shellLine string
 	if rt.Env().GOOS() == "windows" {
 		name = "cmd"
-		shellLine = command + " & echo " + captureSentinel + " & set"
+		// The "&" after the command is glued without a space on
+		// purpose: in cmd, "set X=value & ..." makes the space part
+		// of the value, so a capture command ending in a set would
+		// capture a trailing space.
+		shellLine = command + "& echo " + captureSentinel + " & set"
 		args = []string{"/c", shellLine}
 	} else {
 		name = "sh"

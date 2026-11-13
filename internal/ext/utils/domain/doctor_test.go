@@ -42,8 +42,18 @@ func TestRunDoctor_HealthyConfigWithProgram(t *testing.T) {
 	if c := findCheck(checks, domain.DoctorOK, "configs resolve"); c == nil {
 		t.Errorf("expected OK 'configs resolve', got %+v", checks)
 	}
-	// The missing PATH entry is a warning, never a failure.
-	if c := findCheck(checks, domain.DoctorWarn, "PATH entry does not exist"); c == nil || c.Detail != missingDir {
+	// The missing PATH entry is a warning, never a failure. Search by
+	// Detail rather than taking the first PATH warning: the resolved
+	// PATH also contains the host's own entries, and on some machines
+	// (e.g. CI runners) unrelated host entries may not exist either,
+	// producing earlier warnings for those.
+	foundMissing := false
+	for _, c := range checks {
+		if c.Status == domain.DoctorWarn && strings.Contains(c.Label, "PATH entry does not exist") && c.Detail == missingDir {
+			foundMissing = true
+		}
+	}
+	if !foundMissing {
 		t.Errorf("expected warning for missing PATH entry %q, got %+v", missingDir, checks)
 	}
 	if c := findCheck(checks, domain.DoctorOK, "program found: doctor-tool"); c == nil {
