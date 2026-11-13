@@ -474,16 +474,8 @@ func (e *Engine) Dump(opts types.RunOptions, shell string) error {
 	}
 
 	for _, kv := range finalEnv {
-		switch shell {
-		case "unix":
-			fmt.Printf("export %s\n", kv)
-		case "win":
-			parts := strings.SplitN(kv, "=", 2)
-			if len(parts) == 2 {
-				fmt.Printf("set %s=%s\n", parts[0], parts[1])
-			}
-		default:
-			fmt.Println(kv)
+		if line, ok := FormatDumpLine(kv, shell); ok {
+			fmt.Println(line)
 		}
 	}
 	return nil
