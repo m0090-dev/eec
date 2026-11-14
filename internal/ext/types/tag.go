@@ -39,17 +39,29 @@ func (t *TagData) Write(rt interfaces.Runtime, tagName string) error {
 	if err := ValidateTagName(tagName); err != nil {
 		return err
 	}
-	homeDir, err := rt.Env().UserHomeDir()
-	if homeDir == "" {
-		return err
+	dir := ResolveDataDir(rt)
+	if dir == "" {
+		return fmt.Errorf("home dir not set")
 	}
-	dir := filepath.Join(homeDir, DEFAULT_TAG_DIR)
 	if err := rt.FS().MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 	tagPath := filepath.Join(dir, fmt.Sprintf("%s.tag", tagName))
 
-	data, err := json.MarshalIndent(t, "", "  ")
+	// Store paths that live inside the data directory relative to it,
+	// so the tag keeps working when the data directory moves (e.g. a
+	// portable drive letter change). Work on a copy so the caller's
+	// TagData keeps its original (absolute) paths.
+	stored := *t
+	stored.ConfigFile = RelativizeDataDirPath(rt, t.ConfigFile)
+	if t.ImportConfigFiles != nil {
+		stored.ImportConfigFiles = make([]string, len(t.ImportConfigFiles))
+		for i, imp := range t.ImportConfigFiles {
+			stored.ImportConfigFiles[i] = RelativizeDataDirPath(rt, imp)
+		}
+	}
+
+	data, err := json.MarshalIndent(&stored, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal tag data: %w", err)
 	}
@@ -76,11 +88,11 @@ func ReadTagData(rt interfaces.Runtime, tagName string) (TagData, error) {
 	if err := ValidateTagName(tagName); err != nil {
 		return TagData{}, err
 	}
-	homeDir, _ := rt.Env().UserHomeDir()
-	if homeDir == "" {
+	dir := ResolveDataDir(rt)
+	if dir == "" {
 		return TagData{}, fmt.Errorf("home dir not set")
 	}
-	tagPath := filepath.Join(homeDir, ".eec", fmt.Sprintf("%s.tag", tagName))
+	tagPath := filepath.Join(dir, fmt.Sprintf("%s.tag", tagName))
 
 	content, err := rt.FS().ReadFile(tagPath)
 	if err != nil {

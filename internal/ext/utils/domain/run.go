@@ -15,7 +15,35 @@ func ReadOrFallbackRecursive(opts types.RunOptions, rt interfaces.Runtime, name 
 	return readOrFallbackInternal(opts, rt, name, make(map[string]bool))
 }
 
+// ResolveDataDirRelative retries a relative path against the
+// resolved data directory (EEC_HOME / portable / ~/.eec). Tag files
+// store imports inside the data directory in relative form so they
+// survive the directory moving (Phase 4); this is where those
+// relative imports find their way back. Paths that exist relative to
+// the CWD, absolute paths, and paths found nowhere are returned
+// unchanged.
+func ResolveDataDirRelative(rt interfaces.Runtime, name string) string {
+	if name == "" || filepath.IsAbs(name) {
+		return name
+	}
+	if rt.FS().FileExists(name) {
+		return name
+	}
+	dataDir := types.ResolveDataDir(rt)
+	if dataDir == "" {
+		return name
+	}
+	candidate := filepath.Join(dataDir, name)
+	if rt.FS().FileExists(candidate) {
+		return candidate
+	}
+	return name
+}
+
 func readOrFallbackInternal(opts types.RunOptions, rt interfaces.Runtime, name string, visited map[string]bool) (types.Config, error) {
+	// データディレクトリ相対の import を先に解決する
+	name = ResolveDataDirRelative(rt, name)
+
 	// 循環チェック
 	absPath, _ := filepath.Abs(name)
 	if visited[absPath] {

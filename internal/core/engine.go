@@ -180,6 +180,14 @@ func (e *Engine) TagAdd(name string, tag types.TagData) error {
 			tag.ImportConfigFiles[i] = general.NormalizeSourcePath(imp)
 		}
 	}
+	// 3. Phase 4: データディレクトリ内にあるファイルは、絶対パス
+	// ではなくデータディレクトリ相対で保存する。ドライブレターが
+	// 変わるなどデータディレクトリが移動してもタグが壊れない。
+	// (TagData.Write 側でも同じ相対化を行うので、これは二重の安全策。)
+	tag.ConfigFile = types.RelativizeDataDirPath(e.Runtime, tag.ConfigFile)
+	for i, imp := range tag.ImportConfigFiles {
+		tag.ImportConfigFiles[i] = types.RelativizeDataDirPath(e.Runtime, imp)
+	}
 
 	general.PrintBlock("Tag Add Debug", map[string]interface{}{
 		"tagName":             tagName,
@@ -215,12 +223,11 @@ func (e *Engine) TagRead(tagName string) error {
 	return nil
 }
 func (e *Engine) TagList() error {
-	homeDir, err := e.Env().UserHomeDir()
-	if homeDir == "" {
-		e.Runtime.Logger().Error().Err(err).Msg(fmt.Sprintf("homeDir(%s)が設定されていません", homeDir))
+	tagDir := types.ResolveDataDir(e.Runtime)
+	if tagDir == "" {
+		e.Runtime.Logger().Error().Msg("データディレクトリ (EEC_HOME / ~/.eec) が解決できません")
 		return fmt.Errorf("Missing required homeDir")
 	}
-	tagDir := filepath.Join(homeDir, types.DEFAULT_TAG_DIR)
 	fileLists, err := general.GetFilesWithExtension(tagDir, ".tag")
 	if err != nil {
 		e.Runtime.Logger().Error().Err(err).Msg("タグファイルが見つかりませんでした")
@@ -237,14 +244,13 @@ func (e *Engine) TagRemove(name string) error {
 	if err := types.ValidateTagName(tagName); err != nil {
 		return err
 	}
-	homeDir, err := e.Env().UserHomeDir()
-	if homeDir == "" {
-		e.Runtime.Logger().Error().Err(err).Msg(fmt.Sprintf("homeDir(%s)が設定されていません", homeDir))
+	tagDir := types.ResolveDataDir(e.Runtime)
+	if tagDir == "" {
+		e.Runtime.Logger().Error().Msg("データディレクトリ (EEC_HOME / ~/.eec) が解決できません")
 		return fmt.Errorf("Missing required homeDir")
 	}
-	tagDir := filepath.Join(homeDir, types.DEFAULT_TAG_DIR)
 	tagPath := filepath.Join(tagDir, fmt.Sprintf("%s.tag", tagName))
-	err = e.FS().Remove(tagPath)
+	err := e.FS().Remove(tagPath)
 	if err != nil {
 		e.Runtime.Logger().Error().
 			Err(err).

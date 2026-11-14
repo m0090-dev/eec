@@ -50,6 +50,9 @@ func ResolveRunOptions(
 	}
 
 	if configFile != "" {
+		// タグにデータディレクトリ相対で保存された ConfigFile を
+		// 解決する (CWD 相対で見つからない場合のみ)。
+		configFile = ResolveDataDirRelative(rt, configFile)
 		if abs, absErr := filepath.Abs(configFile); absErr == nil {
 			configFile = abs
 		} else {
@@ -123,6 +126,13 @@ func ResolveRunOptions(
 		finalEnv = cfg.BuildEnvs(rt, finalEnv, opts.Separator, expandOpts)
 	}
 
+	// Phase 4: [capture] コマンドを最終環境に対して実行し、結果の
+	// 環境差分を取り込む (exec_commands が無効ならスキップ)。
+	finalEnv, err = applyCaptures(rt, allConfigs, finalEnv, expandOpts)
+	if err != nil {
+		return "", "", nil, nil, nil, err
+	}
+
 	return configFile, program, programArgs, finalEnv, allConfigs, nil
 }
 
@@ -143,5 +153,5 @@ func resolveInlineFromOptions(opts types.RunOptions, rt interfaces.Runtime) (typ
 }
 
 func isConfigPresent(cfg types.Config) bool {
-	return cfg.RawEnvs != nil || len(cfg.Configs) > 0 || cfg.Program.Path != ""
+	return cfg.RawEnvs != nil || len(cfg.Configs) > 0 || cfg.Program.Path != "" || len(cfg.CaptureCommands) > 0
 }
