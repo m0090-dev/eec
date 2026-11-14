@@ -14,12 +14,10 @@ type RunOptions struct {
 	Tag              string
 	Imports          []string
 	// Timeout for waiting program; zero means wait indefinitely
-	WaitTimeout       time.Duration
-	HideWindow        bool
-	DeleterPath       string
-	DeleterHideWindow bool
-	Separator         string
-	Verbose           bool
-	DuplicateStrict   bool
-	DuplicateNoWarn   bool
+	WaitTimeout     time.Duration
+	HideWindow      bool
+	Separator       string
+	Verbose         bool
+	DuplicateStrict bool
+	DuplicateNoWarn bool
 }

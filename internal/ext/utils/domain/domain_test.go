@@ -328,42 +328,6 @@ func TestResolveRunOptions_NonExistentConfigFileSkipped(t *testing.T) {
 }
 
 // =============================================================
-// run.go — IsProcessRunning (unsupported OS のみ)
-// =============================================================
-
-func TestIsProcessRunning_UnsupportedOS(t *testing.T) {
-	rt := newMockRuntime()
-	rt.env.goos = "plan9"
-	_, err := domain.IsProcessRunning(rt, "someproc")
-	if err == nil {
-		t.Error("expected error for unsupported OS, got nil")
-	}
-	if !strings.Contains(err.Error(), "unsupported OS") {
-		t.Errorf("error %q should contain 'unsupported OS'", err.Error())
-	}
-}
-
-// =============================================================
-// run.go — IsPIDRunning (不正 PID のみ。実プロセス確認は行わない)
-// =============================================================
-
-func TestIsPIDRunning_ZeroPID(t *testing.T) {
-	rt := newMockRuntime()
-	_, err := domain.IsPIDRunning(rt, rt.logger, 0)
-	if err == nil {
-		t.Error("expected error for PID 0")
-	}
-}
-
-func TestIsPIDRunning_NegativePID(t *testing.T) {
-	rt := newMockRuntime()
-	_, err := domain.IsPIDRunning(rt, rt.logger, -1)
-	if err == nil {
-		t.Error("expected error for negative PID")
-	}
-}
-
-// =============================================================
 // run.go — ReadOrFallback / ReadOrFallbackRecursive
 // =============================================================
 
@@ -425,29 +389,6 @@ func TestGenWindowsTagUtilsScript_DifferentTagsDiffer(t *testing.T) {
 	}
 }
 
-func TestGenWindowsWrapScript_NonEmptyWithCRLF(t *testing.T) {
-	script := domain.GenWindowsWrapScript()
-	if len(script) == 0 {
-		t.Error("wrap script should not be empty")
-	}
-	if !strings.Contains(script, "\r\n") {
-		t.Error("wrap script should use CRLF")
-	}
-}
-
-func TestGenWindowsGUIWrapScript_HasCRLF(t *testing.T) {
-	script := domain.GenWindowsGUIWrapScript()
-	if !strings.Contains(script, "\r\n") {
-		t.Error("GUI wrap script should use CRLF")
-	}
-}
-
-func TestGenUnixWrapScript_NonEmpty(t *testing.T) {
-	if script := domain.GenUnixWrapScript(); len(script) == 0 {
-		t.Error("unix wrap script should not be empty")
-	}
-}
-
 func TestGenUnixTagUtilsScript_NoPanic(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -458,7 +399,7 @@ func TestGenUnixTagUtilsScript_NoPanic(t *testing.T) {
 }
 
 // =============================================================
-// gen.go — GenUtilsScript / GenWrapScript (mock FS 経由)
+// gen.go — GenUtilsScript (mock FS 経由)
 // =============================================================
 
 func TestGenUtilsScript_EmptyHomeDir_NoPanic(t *testing.T) {
@@ -480,40 +421,4 @@ func TestGenUtilsScript_NoTagFiles_NoPanic(t *testing.T) {
 		}
 	}()
 	domain.GenUtilsScript(rt, "", false)
-}
-
-// GenWrapScript は MkdirAll → Create を mock FS に対して呼ぶことを確認
-func TestGenWrapScript_CallsMkdirAndCreate(t *testing.T) {
-	rt := newMockRuntime()
-	domain.GenWrapScript(rt)
-	if len(rt.fs.mkdirCalls) == 0 {
-		t.Error("expected MkdirAll to be called")
-	}
-	if len(rt.fs.existingFiles) == 0 {
-		t.Error("expected Create to be called")
-	}
-}
-
-// MkdirAll がエラーを返しても panic しない
-func TestGenWrapScript_MkdirError_NoPanic(t *testing.T) {
-	rt := newMockRuntime()
-	rt.fs.mkdirErr = fmt.Errorf("permission denied")
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("GenWrapScript panicked on MkdirAll error: %v", r)
-		}
-	}()
-	domain.GenWrapScript(rt)
-}
-
-// Create がエラーを返しても panic しない
-func TestGenWrapScript_CreateError_NoPanic(t *testing.T) {
-	rt := newMockRuntime()
-	rt.fs.createErr = fmt.Errorf("disk full")
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("GenWrapScript panicked on Create error: %v", r)
-		}
-	}()
-	domain.GenWrapScript(rt)
 }

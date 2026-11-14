@@ -49,8 +49,6 @@ eec run -c test.toml -p powershell -a "-NoExit","-Command","Write-Output 'hello 
 | `-i`, `--imports` | Additional config files or tags to import (comma-separated) |
 | `--wait-timeout` | Process wait timeout in seconds |
 | `--hide-window` | Launch the program without a visible window |
-| `--deleter-path` | Path to the deleter program |
-| `--deleter-hide-window` | Launch the deleter without a visible window |
 | `--duplicate-strict` | Treat duplicate environment variable definitions as an error |
 | `--duplicate-no-warn` | Suppress warnings for duplicate environment variables |
 | `-v`, `--verbose` | Enable debug logging |

@@ -34,7 +34,7 @@ func hash() string {
 	return strings.TrimSpace(string(out))
 }
 
-// buildModeArg: CLI用とDeleter用でパッケージパスを変える
+// buildModeArg: パッケージごとに ldflags / gcflags を組み立てる
 func buildModeArg(mode, pkg string) (ldflags, gcflags []string) {
 	h := hash()
 	if strings.ToLower(mode) == "debug" {
@@ -82,17 +82,11 @@ func BuildCLI(mode string) error {
 		args = append(args, "-gcflags", strings.Join(gcflags, " "))
 	}
 
-	if err := run(cliDir, "go", args...); err != nil {
-		return err
-	}
-
-	// CLIビルド後に deleter もビルド
-	return BuildDeleter(mode)
+	return run(cliDir, "go", args...)
 }
 
 func BuildCLIRelease() error { return BuildCLI("release") }
 func BuildCLIDebug() error   { return BuildCLI("debug") }
-
 
 // --- Shared library build ---
 func BuildLib(mode string) error {
@@ -123,30 +117,3 @@ func BuildLib(mode string) error {
 
 func BuildLibRelease() error { return BuildLib("release") }
 func BuildLibDebug() error   { return BuildLib("debug") }
-
-// --- Deleter build ---
-func BuildDeleter(mode string) error {
-	if mode == "" {
-		mode = "release"
-	}
-
-	if os.Getenv("GOOS") == "windows" {
-		targetExt = ".exe"
-	} else {
-		targetExt = ""
-	}
-
-	fmt.Printf("Building deleter (%s)...\n", mode)
-
-	root := projectRoot()
-	deleterDir := filepath.Join(root, "cmd/eec-deleter")
-	buildFile := filepath.Join(root, "build", "eec-deleter"+targetExt)
-
-	ldflags, gcflags := buildModeArg(mode, "github.com/m0090-dev/eec/internal/ext/types")
-	args := []string{"build", "-ldflags", strings.Join(ldflags, " "), "-o", buildFile}
-	if len(gcflags) > 0 {
-		args = append(args, "-gcflags", strings.Join(gcflags, " "))
-	}
-
-	return run(deleterDir, "go", args...)
-}
