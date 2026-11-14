@@ -6,11 +6,23 @@ import (
 	"sort"
 )
 
+// EnvDefinition は1回分の変数定義を表す（どのファイルが、どんな値を、
+// どのセクションで定義したか）。上書きチェーンの表示に使う。
+type EnvDefinition struct {
+	Source  string      // 定義した設定ファイル ("<inline>" の場合もある)
+	Value   interface{} // 設定に書かれた生の値
+	Prepend bool        // [envs.prepend] 由来なら true
+	Section string      // "", "append", "prepend"
+	Origin  string      // OS セクション名 (共通なら "")
+}
+
 // EnvSource は環境変数の定義元と上書き情報を保持する。
 type EnvSource struct {
 	Value        string
 	DefinedIn    string // 初回定義ファイル
 	OverriddenBy string // 上書きしたファイル（なければ空文字）
+	// History は解決順に並んだ全定義（初回定義を含む）。
+	History []EnvDefinition
 }
 
 // EnvTracker は全環境変数の追跡情報を保持する。
@@ -41,19 +53,41 @@ func TrackEnvOverrides(configs []Config, goos string) *EnvTracker {
 		for _, env := range cfg.Envs {
 			key := CanonicalEnvKey(goos, env.Key)
 			val := fmt.Sprint(env.Value)
+			def := EnvDefinition{
+				Source:  source,
+				Value:   env.Value,
+				Prepend: env.Prepend,
+				Section: env.Section,
+				Origin:  env.Origin,
+			}
 			if existing, ok := tracker.Vars[key]; ok {
 				// すでに定義済み → 上書き記録
 				existing.OverriddenBy = source
 				existing.Value = val
+				existing.History = append(existing.History, def)
 			} else {
 				tracker.Vars[key] = &EnvSource{
 					Value:     val,
 					DefinedIn: source,
+					History:   []EnvDefinition{def},
 				}
 			}
 		}
 	}
 	return tracker
+}
+
+// OverriddenKeys は複数回定義された（=上書きされた）変数のキーを
+// ソートして返す。
+func (t *EnvTracker) OverriddenKeys() []string {
+	var keys []string
+	for key, src := range t.Vars {
+		if len(src.History) > 1 {
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // PrintOverrides はログや標準出力に上書きされた変数の一覧を出す。

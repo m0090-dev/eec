@@ -1,48 +1,59 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package subcmd
 
 import (
-	_ "fmt"
 	"github.com/m0090-dev/eec/internal/core"
 	"github.com/spf13/cobra"
 )
 
-func tree(args []string) {
-	e := core.NewEngine(nil)
-	if err := e.Tree(args[0]); err != nil {
-		e.Runtime.Logger().Fatal().Err(err).Msg("Failed to tree")
-	}
-
-}
+var (
+	treeKey     string
+	treeFull    bool
+	treeNoColor bool
+)
 
 // treeCmd represents the tree command
 var treeCmd = &cobra.Command{
-	Use:   "tree",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Use:   "tree <tag>",
+	Short: "Show the dependency tree of a tag, with values",
+	Long: `Prints the full dependency tree of a tag: its config file and every
+imported file or tag (recursively), with each environment variable's
+value, [prepend]/[append]/[os: ...] badges where relevant, capture
+commands and programs.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+After the tree, variables defined more than once are listed under
+"Overrides" with their definition chain in resolution order and the
+winning final value, followed by a one-line summary.
+
+With --key, only that variable is traced: every definition of it
+across the tag's configs, in resolution order, plus its fully
+resolved final value. Exits non-zero when the variable is not
+defined by the tag.
+
+Values longer than 60 characters are truncated unless --full is
+given. Colors are used only when writing to a terminal (and are
+also disabled by the NO_COLOR environment variable).
+
+Examples:
+  eec tree dev
+  eec tree dev --full
+  eec tree dev --key PATH`,
 	Args:              cobra.ExactArgs(1),
 	ValidArgsFunction: completeTagNames,
-	Run: func(cmd *cobra.Command, args []string) {
-		tree(args)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		e := core.NewEngine(nil)
+		return e.TreeWithOptions(args[0], core.TreeOptions{
+			Full:    treeFull,
+			NoColor: treeNoColor,
+			Key:     treeKey,
+		})
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(treeCmd)
-	// Here you will define your flags and configuration settings.
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// treeCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// treeCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	treeCmd.Flags().StringVar(&treeKey, "key", "", "trace a single variable: show its definition chain and final value")
+	treeCmd.Flags().BoolVar(&treeFull, "full", false, "do not truncate long values")
+	treeCmd.Flags().BoolVar(&treeNoColor, "no-color", false, "disable colors")
+	_ = treeCmd.RegisterFlagCompletionFunc("key", cobra.NoFileCompletions)
 }

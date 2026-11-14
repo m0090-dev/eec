@@ -10,6 +10,8 @@ import (
 	"github.com/m0090-dev/eec/internal/ext/types"
 	"github.com/m0090-dev/eec/internal/ext/utils/domain"
 	"github.com/m0090-dev/eec/internal/ext/utils/general"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -18,6 +20,17 @@ import (
 // for executing commands and file operations so CLI can inject mocks for tests.
 type Engine struct {
 	Runtime interfaces.Runtime
+	// Out is the writer for human-readable reports (currently the
+	// dependency tree). Nil means os.Stdout.
+	Out io.Writer
+}
+
+// outWriter returns the configured report writer (default os.Stdout).
+func (e *Engine) outWriter() io.Writer {
+	if e.Out != nil {
+		return e.Out
+	}
+	return os.Stdout
 }
 
 func (e *Engine) FS() interfaces.FS                   { return e.Runtime.FS() }
@@ -259,133 +272,6 @@ func (e *Engine) TagRemove(name string) error {
 		return fmt.Errorf("failed to remove tag %s: %w", tagName, err)
 	}
 	e.TagList()
-	return nil
-}
-
-// Tree は指定されたタグ名に基づき、関連する設定ファイルや依存構造をツリー表示する。
-func (e *Engine) Tree(tagName string) error {
-	data, err := types.ReadTagData(e.Runtime, tagName)
-	if err != nil {
-		return fmt.Errorf("failed to read tag data for %s: %w", tagName, err)
-	}
-
-	fmt.Printf("Dependency tree for tag: %s\n", tagName)
-	visited := make(map[string]bool)
-
-	// タグ自身のConfigFileを起点に展開
-	if data.ConfigFile != "" {
-		if err := e.printConfigTree(data.ConfigFile, "", visited); err != nil {
-			return err
-		}
-	}
-
-	// ImportConfigFiles を展開
-	for _, imp := range data.ImportConfigFiles {
-		// タグかファイルか判定
-		if isConfigFile(imp) {
-			fmt.Printf("└── Imported file: %s\n", filepath.Base(imp))
-			if err := e.printConfigTree(imp, "    ", visited); err != nil {
-				return err
-			}
-		} else {
-			// タグ名として存在するか確認
-			_, err := types.ReadTagData(e.Runtime, imp)
-			if err == nil {
-				fmt.Printf("└── Imported tag: %s\n", imp)
-				// 再帰的にツリーを出す
-				if err := e.Tree(imp); err != nil {
-					return err
-				}
-			} else {
-				// タグでもファイルでもない場合
-				fmt.Printf("└── Unknown import: %s\n", imp)
-			}
-		}
-	}
-
-	data2, _ := types.ReadTagData(e.Runtime, tagName)
-	_, _, _, _, allConfigs, err2 := domain.ResolveRunOptions(types.RunOptions{Tag: tagName}, data2, e.Runtime)
-	if err2 == nil {
-		tracker := types.TrackEnvOverrides(allConfigs, e.Runtime.Env().GOOS())
-		tracker.PrintOverrides(e.Runtime.Logger(), false, false)
-	}
-	return nil
-}
-
-// ファイル拡張子で設定ファイルか判定
-func isConfigFile(name string) bool {
-	ext := strings.ToLower(filepath.Ext(name))
-	switch ext {
-	case ".toml", ".yaml", ".yml", ".json", ".env":
-		return true
-	default:
-		return false
-	}
-}
-
-func (e *Engine) printConfigTree(filePath string, prefix string, visited map[string]bool) error {
-	absPath, err := filepath.Abs(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to resolve path %s: %w", filePath, err)
-	}
-
-	if visited[absPath] {
-		fmt.Println(prefix + filepath.Base(filePath) + " (already visited)")
-		return nil
-	}
-	visited[absPath] = true
-
-	fmt.Println(prefix + filepath.Base(filePath))
-
-	config, err := types.ReadConfig(e.Runtime, absPath)
-	if err != nil {
-		e.Runtime.Logger().Warn().Err(err).Str("config", absPath).Msg("config読み込み失敗（スキップ）")
-		return nil
-	}
-
-	// configs[] を出力
-	for i, meta := range config.Configs {
-		last := (i == len(config.Configs)-1) && len(config.Envs) == 0 && config.Program.Path == ""
-		var branch string
-		if last {
-			branch = "└── "
-		} else {
-			branch = "├── "
-		}
-
-		desc := meta.Description
-		if desc == "" {
-			desc = "(no description)"
-		}
-		fmt.Println(prefix + branch + fmt.Sprintf("Config: %s  [sep='%s']", desc, meta.Separator))
-	}
-
-	// envs[] を出力
-	for i, env := range config.Envs {
-		last := (i == len(config.Envs)-1) && config.Program.Path == ""
-		var branch, nextPrefix string
-		if last {
-			branch = "└── "
-			nextPrefix = prefix + "    "
-		} else {
-			branch = "├── "
-			nextPrefix = prefix + "│   "
-		}
-		fmt.Println(prefix + branch + fmt.Sprintf("Env: %s", env.Key))
-
-		// .envファイル参照ならさらにツリー展開
-		if val, ok := env.Value.(string); ok && strings.HasSuffix(val, ".env") {
-			if err := e.printConfigTree(val, nextPrefix, visited); err != nil {
-				return err
-			}
-		}
-	}
-
-	// program.path が存在すれば、それもノードとして表示
-	if config.Program.Path != "" {
-		fmt.Println(prefix + "└── " + fmt.Sprintf("Program: %s", config.Program.Path))
-	}
-
 	return nil
 }
 
