@@ -14,7 +14,11 @@ type DefaultExecutor struct{}
 
 func (d DefaultExecutor) Command(path string, args []string, env []string, stdin, stdout, stderr *os.File, hideWindow bool) (*exec.Cmd, error) {
 	var cmd *exec.Cmd
-	cmd = exec.Command(path, args...)
+	// Resolve bare program names against the PATH of env (the
+	// environment the child will run with), not eec's own PATH:
+	// exec.Command would look the name up in the process PATH and
+	// never see the configured one. See impl_lookpath.go.
+	cmd = exec.Command(resolveProgramPath(path, env), args...)
 	cmd.Env = env
 	if stdin != nil {
 		cmd.Stdin = stdin

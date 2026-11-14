@@ -25,14 +25,22 @@ func isBatchFile(path string) bool {
 func (d DefaultExecutor) Command(path string, args []string, env []string, stdin, stdout, stderr *os.File, hideWindow bool) (*exec.Cmd, error) {
 	var cmd *exec.Cmd
 
+	// Resolve bare program names against the PATH of env (the
+	// environment the child will run with), not eec's own PATH:
+	// exec.Command would look the name up in the process PATH and
+	// never see the configured one. See impl_lookpath.go.
+	resolved := resolveProgramPath(path, env)
+
 	// Batch scripts have no executable format of their own, so only
 	// those are routed through cmd.exe /C. Everything else is executed
-	// directly so argument quoting is not mangled by cmd.exe.
-	if isBatchFile(path) {
-		cmdArgs := append([]string{"/C", path}, args...)
+	// directly so argument quoting is not mangled by cmd.exe. The
+	// batch check runs on the resolved path so a bare name that
+	// resolves to a .bat/.cmd file is detected too.
+	if isBatchFile(resolved) {
+		cmdArgs := append([]string{"/C", resolved}, args...)
 		cmd = exec.Command("cmd.exe", cmdArgs...)
 	} else {
-		cmd = exec.Command(path, args...)
+		cmd = exec.Command(resolved, args...)
 	}
 
 	// Windows 専用フラグ
