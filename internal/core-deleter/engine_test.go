@@ -113,7 +113,7 @@ func (ex *mockExecutor) FindProcess(pid int) (*os.Process, error) { return nil, 
 func (ex *mockExecutor) StartProcess(n string, a, e []string, si, so, se *os.File, h bool) (*exec.Cmd, error) {
 	return nil, nil
 }
-func (ex *mockExecutor) WaitProcess(_ *os.Process, _ time.Duration) error { return nil }
+func (ex *mockExecutor) WaitProcess(_ *exec.Cmd, _ time.Duration) error { return nil }
 func (ex *mockExecutor) Command(n string, a, e []string, si, so, se *os.File, h bool) (*exec.Cmd, error) {
 	// Windows では "echo" 単体では実行できないため、cmd /c echo を使用するか、
 	// そもそも外部コマンドに依存しない空のコマンドを返します。

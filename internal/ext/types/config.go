@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -67,16 +68,21 @@ func (c *Config) SortEnvsByDependency() error {
 	resolved := make([]Environ, 0, len(c.Envs))
 	seen := make(map[string]bool)
 
-	var resolve func(e Environ, visiting map[string]bool) error
-	resolve = func(e Environ, visiting map[string]bool) error {
-		if visiting[strings.ToUpper(e.Key)] {
-			return fmt.Errorf("circular reference detected: %s", e.Key)
+	var resolve func(e Environ, chain []string) error
+	resolve = func(e Environ, chain []string) error {
+		// 循環チェック: 現在の依存チェーンに自分が含まれていたら、
+		// 経路全体（例: A -> B -> A）を添えてエラーにする。
+		for _, link := range chain {
+			if strings.EqualFold(link, e.Key) {
+				full := append(append([]string{}, chain...), e.Key)
+				return fmt.Errorf("circular reference detected: %s", strings.Join(full, " -> "))
+			}
 		}
 		if seen[strings.ToUpper(e.Key)] {
 			return nil
 		}
 
-		visiting[strings.ToUpper(e.Key)] = true
+		chain = append(chain, e.Key)
 
 		// 値から依存している変数名を取得
 		deps := extractDependencies(e.Value)
@@ -84,14 +90,13 @@ func (c *Config) SortEnvsByDependency() error {
 			// 設定ファイル内の他の変数に依存しているか確認
 			for _, other := range c.Envs {
 				if strings.EqualFold(other.Key, depKey) {
-					if err := resolve(other, visiting); err != nil {
+					if err := resolve(other, chain); err != nil {
 						return err
 					}
 				}
 			}
 		}
 
-		visiting[strings.ToUpper(e.Key)] = false
 		seen[strings.ToUpper(e.Key)] = true
 		resolved = append(resolved, e)
 		return nil
@@ -99,7 +104,7 @@ func (c *Config) SortEnvsByDependency() error {
 
 	for _, e := range c.Envs {
 		if !seen[strings.ToUpper(e.Key)] {
-			if err := resolve(e, make(map[string]bool)); err != nil {
+			if err := resolve(e, nil); err != nil {
 				return err
 			}
 		}
@@ -107,6 +112,16 @@ func (c *Config) SortEnvsByDependency() error {
 
 	c.Envs = resolved
 	return nil
+}
+
+// sortedKeys returns the keys of m in deterministic (sorted) order.
+func sortedKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func (c *Config) NormalizeEnvs(rt interfaces.Runtime) error {
@@ -133,27 +148,34 @@ func (c *Config) NormalizeEnvs(rt interfaces.Runtime) error {
 			}
 
 			// B. リスト内直接定義のチェック: - TEST: "aiueo"
-			// map の中身をスキャンして最初の 1 つを取り出す
-			for k, v := range m {
+			// 1要素に複数キーがあっても全部取り出す（以前は map を
+			// 回して最初の1つで break し、残りをランダムに落としていた）。
+			// 順序を決定的にするためキーをソートしてから追加する。
+			for _, k := range sortedKeys(m) {
 				if k != "" {
-					c.Envs = append(c.Envs, Environ{Key: k, Value: v})
+					c.Envs = append(c.Envs, Environ{Key: k, Value: m[k]})
 				}
-				break // 1つの要素につき1変数を想定
 			}
 		}
 
 	case map[string]interface{}:
 		// 【パターン2：マップ形式】 { "VARIABLE": "VALUE", "PATH": ["A", "B"] }
-		for k, v := range data {
-			c.Envs = append(c.Envs, Environ{Key: k, Value: v})
+		// map のイテレーション順はランダムなため、キーをソートして
+		// 決定的な順序にする（依存関係の最終順序は SortEnvsByDependency が決める）。
+		for _, k := range sortedKeys(data) {
+			c.Envs = append(c.Envs, Environ{Key: k, Value: data[k]})
 		}
 
 	case map[interface{}]interface{}:
 		// YAMLパーサーの型互換性ケア
+		strMap := make(map[string]interface{}, len(data))
 		for k, v := range data {
 			if strKey, ok := k.(string); ok {
-				c.Envs = append(c.Envs, Environ{Key: strKey, Value: v})
+				strMap[strKey] = v
 			}
+		}
+		for _, k := range sortedKeys(strMap) {
+			c.Envs = append(c.Envs, Environ{Key: k, Value: strMap[k]})
 		}
 	default:
 		// 想定外の型（文字列や数値などが直接 envs に指定された場合）
@@ -217,7 +239,7 @@ func ReadConfig(rt interfaces.Runtime, fileName string) (Config, error) {
 	} else if ext == ".env" {
 		return ReadEnv(rt, fileName)
 	}
-	return config, nil
+	return config, fmt.Errorf("unsupported config file extension %q: %s", ext, fileName)
 }
 
 func ReadInlineConfig(rt interfaces.Runtime, content string, format string) (Config, error) {
@@ -367,14 +389,21 @@ func ReadEnv(rt interfaces.Runtime, fileName string) (Config, error) {
 	config.SourcePath = general.NormalizeSourcePath(fileName)
 	envMap, err = godotenv.Read(fileName)
 	if err != nil {
-		rt.Logger().Fatal().Err(err).Msg("Error reading .env file")
+		return Config{}, fmt.Errorf("error reading .env file %s: %w", fileName, err)
 	}
 
+	// map のイテレーション順に依存しないようキーをソートする
+	keys := make([]string, 0, len(envMap))
+	for key := range envMap {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
 	config.Envs = make([]Environ, 0, len(envMap))
-	for key, value := range envMap {
+	for _, key := range keys {
 		config.Envs = append(config.Envs, Environ{
 			Key:   key,
-			Value: value,
+			Value: envMap[key],
 		})
 	}
 

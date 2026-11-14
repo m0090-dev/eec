@@ -147,7 +147,7 @@ func (ex *mockExecutor) StartProcess(name string, args, env []string, stdin, std
 	ex.startedNames = append(ex.startedNames, name)
 	return &exec.Cmd{}, nil
 }
-func (ex *mockExecutor) WaitProcess(_ *os.Process, _ time.Duration) error { return nil }
+func (ex *mockExecutor) WaitProcess(_ *exec.Cmd, _ time.Duration) error { return nil }
 func (ex *mockExecutor) Command(name string, args, env []string, stdin, stdout, stderr *os.File, hide bool) (*exec.Cmd, error) {
 	return &exec.Cmd{Path: name, Args: append([]string{name}, args...)}, nil
 }

@@ -186,7 +186,12 @@ func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
 		// ----------------------*/
 		// Wait for process
 		// -----------------------*/
-	if err := e.Executor().WaitProcess(cmd.Process, opts.WaitTimeout); err != nil {
+	if err := e.Executor().WaitProcess(cmd, opts.WaitTimeout); err != nil {
+		// Preserve the child's exit code so the CLI can exit with it.
+		var exitErr *types.ProcessExitError
+		if errors.As(err, &exitErr) {
+			return exitErr
+		}
 		return fmt.Errorf("process wait error: %w", err)
 	}
 
@@ -305,6 +310,9 @@ func (e *Engine) TagList() error {
 
 func (e *Engine) TagRemove(name string) error {
 	tagName := name
+	if err := types.ValidateTagName(tagName); err != nil {
+		return err
+	}
 	homeDir, err := e.Env().UserHomeDir()
 	if homeDir == "" {
 		e.Runtime.Logger().Error().Err(err).Msg(fmt.Sprintf("homeDir(%s)が設定されていません", homeDir))
@@ -469,16 +477,8 @@ func (e *Engine) Dump(opts types.RunOptions, shell string) error {
 	}
 
 	for _, kv := range finalEnv {
-		switch shell {
-		case "unix":
-			fmt.Printf("export %s\n", kv)
-		case "win":
-			parts := strings.SplitN(kv, "=", 2)
-			if len(parts) == 2 {
-				fmt.Printf("set %s=%s\n", parts[0], parts[1])
-			}
-		default:
-			fmt.Println(kv)
+		if line, ok := FormatDumpLine(kv, shell); ok {
+			fmt.Println(line)
 		}
 	}
 	return nil
