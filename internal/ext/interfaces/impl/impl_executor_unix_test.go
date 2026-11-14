@@ -5,12 +5,40 @@ package impl
 
 import (
 	"errors"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/m0090-dev/eec/internal/ext/types"
 )
+
+// TestStartProcess_BareNameResolvedAgainstEnvPath is the regression
+// test for the 2.0.0 breakage where `eec run -t dev nvim` failed with
+// "executable file not found in $PATH%": the tool exists only on the
+// PATH of the environment handed to the child, and the executor must
+// resolve the bare name against that PATH, not eec's own.
+func TestStartProcess_BareNameResolvedAgainstEnvPath(t *testing.T) {
+	dir := t.TempDir()
+	tool := filepath.Join(dir, "eec-envpath-tool")
+	script := "#!/bin/sh\nexit 7\n"
+	if err := os.WriteFile(tool, []byte(script), 0o755); err != nil {
+		t.Fatalf("failed to write tool: %v", err)
+	}
+
+	ex := DefaultExecutor{}
+	env := []string{"PATH=" + dir}
+	cmd, err := ex.StartProcess("eec-envpath-tool", nil, env, nil, nil, nil, false)
+	if err != nil {
+		t.Fatalf("StartProcess failed for env-PATH-only tool: %v", err)
+	}
+	err = ex.WaitProcess(cmd, 0)
+	var exitErr *types.ProcessExitError
+	if !errors.As(err, &exitErr) || exitErr.ExitCode != 7 {
+		t.Fatalf("expected exit code 7 from the resolved tool, got %v", err)
+	}
+}
 
 func startSh(t *testing.T, script string) *exec.Cmd {
 	t.Helper()
