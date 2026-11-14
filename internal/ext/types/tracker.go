@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/m0090-dev/eec/internal/ext/interfaces"
 	"sort"
-	"strings"
 )
 
 // EnvSource は環境変数の定義元と上書き情報を保持する。
@@ -26,7 +25,10 @@ func NewEnvTracker() *EnvTracker {
 
 // TrackEnvOverrides は複数の Config を順に処理し、上書きの発生を追跡する。
 // 引数の configs は優先度が低い順（後ろほど強い）で渡すこと。
-func TrackEnvOverrides(configs []Config) *EnvTracker {
+// goos は対象 OS で、キー比較のケース規則を決める (CanonicalEnvKey 参照)。
+// Windows では "Path" の再定義が "PATH" の上書きとして検出され、
+// Linux/macOS ではケースの異なる変数は別変数として扱われる。
+func TrackEnvOverrides(configs []Config, goos string) *EnvTracker {
 	tracker := NewEnvTracker()
 	for _, cfg := range configs {
 		source := cfg.SourcePath
@@ -37,7 +39,7 @@ func TrackEnvOverrides(configs []Config) *EnvTracker {
 			continue
 		}
 		for _, env := range cfg.Envs {
-			key := strings.ToUpper(env.Key)
+			key := CanonicalEnvKey(goos, env.Key)
 			val := fmt.Sprint(env.Value)
 			if existing, ok := tracker.Vars[key]; ok {
 				// すでに定義済み → 上書き記録

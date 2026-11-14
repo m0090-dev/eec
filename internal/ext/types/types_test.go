@@ -3,6 +3,7 @@ package types_test
 import (
 	"github.com/m0090-dev/eec/internal/ext/interfaces"
 	"github.com/m0090-dev/eec/internal/ext/types"
+	"github.com/m0090-dev/eec/internal/ext/utils/general"
 	"io"
 	"os"
 	"os/exec"
@@ -230,7 +231,8 @@ func TestConfig_SortEnvs(t *testing.T) {
 		},
 	}
 
-	err := cfg.SortEnvsByDependency()
+	// mock runtime は linux (ケースセンシティブ) なので false。
+	err := cfg.SortEnvsByDependency(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +254,7 @@ func TestConfig_BuildEnvs(t *testing.T) {
 	}
 
 	// Linux 環境を想定
-	newEnv := cfg.BuildEnvs(rt, []string{"EXISTING=val"}, ":")
+	newEnv := cfg.BuildEnvs(rt, []string{"EXISTING=val"}, ":", general.DefaultExpandOptions())
 
 	res := make(map[string]string)
 	for _, e := range newEnv {
@@ -274,8 +276,8 @@ func TestTrackEnvOverrides(t *testing.T) {
 		{SourcePath: "file2.toml", Envs: []types.Environ{{Key: "VAR", Value: "new"}}},
 	}
 
-	// 上書きの追跡[cite: 10]
-	tracker := types.TrackEnvOverrides(configs)
+	// 上書きの追跡[cite: 10] (linux: ケースセンシティブ)
+	tracker := types.TrackEnvOverrides(configs, "linux")
 
 	if tracker.Vars["VAR"].OverriddenBy != "file2.toml" {
 		t.Errorf("Override tracking failed: %+v", tracker.Vars["VAR"])

@@ -51,6 +51,8 @@ eec run -c test.toml -p powershell -a "-NoExit","-Command","Write-Output 'hello 
 | `--hide-window` | Launch the program without a visible window |
 | `--duplicate-strict` | Treat duplicate environment variable definitions as an error |
 | `--duplicate-no-warn` | Suppress warnings for duplicate environment variables |
+| `--no-expand` | Disable `${}` variable expansion (also available on `dump`) |
+| `--no-exec` | Disable `$()` command substitution, leaving it literal (also available on `dump`) |
 | `-v`, `--verbose` | Enable debug logging |
 
 **Run using a tag:**
@@ -284,6 +286,26 @@ ${} variable expansion and $() command substitution are supported in TOML, YAML,
 When a variable is defined as an array, its values are merged into (appended to) the existing variable rather than replacing it. For example, PATH = ["C:\\my\\bin"] appends to the current PATH, whereas PATH = "C:\\my\\bin" overwrites it entirely.
 
 
+### OS-Specific Sections
+
+Variables that only apply on one OS can be grouped under `[envs.windows]`, `[envs.linux]`, or `[envs.darwin]` (aliases: `win` for `windows`, `mac` / `macos` for `darwin`). The same nesting works in YAML and JSON. Only the section matching the current OS is applied, after the common `[envs]` entries, so OS-specific values override common ones and `${}` references work in both directions between common and OS-specific variables.
+
+```toml
+[envs]
+ROOT = "/opt/tools"
+
+[envs.windows]
+PATH = ["${ROOT}\\bin"]
+GREETING = "windows"
+
+[envs.linux]
+PATH = ["${ROOT}/bin"]
+GREETING = "linux"
+```
+
+Note: `windows`, `linux`, `darwin` (and their aliases) are reserved names directly under `envs` — when such a key holds a table it is treated as an OS section, not a variable. A reserved name holding a scalar (e.g. `windows = "x"`) is still treated as a regular variable.
+
+
 ### Variable Expansion
 
 Use `${}` to reference other environment variables within values. References are resolved via **topological sort**, so declaration order does not matter — forward references work fine.
@@ -310,6 +332,25 @@ GIT_HASH   = "$(git rev-parse --short HEAD)"
 ```
 
 Both `${}` and `$()` can be combined freely in a single value.
+
+### Disabling Expansion and Command Substitution
+
+Expansion can be turned off per config in the `[configs]` section, or per invocation with CLI flags (the flags win). When several configs are merged, the last config that specifies a toggle wins.
+
+```toml
+[configs]
+expand_vars = false    # ${} (and $()) are left completely unexpanded
+exec_commands = false  # ${} still expands, but $() is left literal instead of being executed
+```
+
+| Where | Setting | Effect |
+|---|---|---|
+| `[configs]` | `expand_vars = false` | No substitution at all; values are used verbatim |
+| `[configs]` | `exec_commands = false` | `${}` expands; `$()` stays literal and is never executed |
+| CLI (`run` / `dump`) | `--no-expand` | Force-disables expansion regardless of the config |
+| CLI (`run` / `dump`) | `--no-exec` | Force-disables `$()` execution regardless of the config |
+
+This is useful when consuming configs you do not fully trust (a `$()` runs a shell command) or when values must contain literal `${}` / `$()` text.
 
 ---
 

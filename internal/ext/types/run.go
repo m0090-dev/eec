@@ -20,4 +20,9 @@ type RunOptions struct {
 	Verbose         bool
 	DuplicateStrict bool
 	DuplicateNoWarn bool
+	// NoExpand / NoExec are CLI overrides that force-disable ${}
+	// expansion / $() command substitution regardless of the
+	// [configs] expand_vars / exec_commands settings.
+	NoExpand bool
+	NoExec   bool
 }

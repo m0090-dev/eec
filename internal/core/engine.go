@@ -86,7 +86,7 @@ func (e *Engine) Run(ctx context.Context, opts types.RunOptions) error {
 	}
 
 	// #20: 環境変数の上書き追跡・表示
-	tracker := types.TrackEnvOverrides(allConfigs)
+	tracker := types.TrackEnvOverrides(allConfigs, e.Runtime.Env().GOOS())
 	if err := tracker.PrintOverrides(e.Runtime.Logger(), opts.DuplicateStrict, opts.DuplicateNoWarn); err != nil {
 		return err
 	}
@@ -300,7 +300,7 @@ func (e *Engine) Tree(tagName string) error {
 	data2, _ := types.ReadTagData(e.Runtime, tagName)
 	_, _, _, _, allConfigs, err2 := domain.ResolveRunOptions(types.RunOptions{Tag: tagName}, data2, e.Runtime)
 	if err2 == nil {
-		tracker := types.TrackEnvOverrides(allConfigs)
+		tracker := types.TrackEnvOverrides(allConfigs, e.Runtime.Env().GOOS())
 		tracker.PrintOverrides(e.Runtime.Logger(), false, false)
 	}
 	return nil

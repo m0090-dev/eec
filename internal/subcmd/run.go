@@ -31,6 +31,8 @@ var SeparatorRunFlag string
 var verboseRunFlag bool
 var duplicateStrictRunFlag bool
 var duplicateNoWarnRunFlag bool
+var noExpandRunFlag bool
+var noExecRunFlag bool
 
 func run() {
 	e := core.NewEngine(nil)
@@ -50,6 +52,8 @@ func run() {
 		Verbose:          verboseRunFlag,
 		DuplicateStrict:  duplicateStrictRunFlag,
 		DuplicateNoWarn:  duplicateNoWarnRunFlag,
+		NoExpand:         noExpandRunFlag,
+		NoExec:           noExecRunFlag,
 	}
 	if err := e.Run(context.Background(), opts); err != nil {
 		// If the child process exited with a non-zero code, exit with
@@ -102,6 +106,10 @@ func init() {
 	// #20: 環境変数上書き制御
 	runCmd.Flags().BoolVar(&duplicateStrictRunFlag, "duplicate-strict", false, "Treat env var overrides as errors")
 	runCmd.Flags().BoolVar(&duplicateNoWarnRunFlag, "duplicate-no-warn", false, "Suppress env var override warnings")
+
+	// 展開・コマンド置換の無効化 (config の expand_vars / exec_commands より優先)
+	runCmd.Flags().BoolVar(&noExpandRunFlag, "no-expand", false, "Disable ${} variable expansion")
+	runCmd.Flags().BoolVar(&noExecRunFlag, "no-exec", false, "Disable $() command substitution (left literal)")
 
 	rootCmd.AddCommand(runCmd)
 }

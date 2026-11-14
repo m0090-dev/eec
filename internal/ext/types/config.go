@@ -27,6 +27,12 @@ type Config struct {
 type MetaConfig struct {
 	Separator   string `toml:"separator" yaml:"separator" json:"separator"`
 	Description string `toml:"description" yaml:"description" json:"description"`
+	// ExpandVars / ExecCommands are tri-state toggles for ${} expansion
+	// and $() command substitution: nil means "not specified here"
+	// (inherit / default true), a non-nil value sets the behavior.
+	// When several configs are merged, the last non-nil value wins.
+	ExpandVars   *bool `toml:"expand_vars" yaml:"expand_vars" json:"expand_vars"`
+	ExecCommands *bool `toml:"exec_commands" yaml:"exec_commands" json:"exec_commands"`
 }
 type ProgramData struct {
 	Path string   `toml:"path" yaml:"path" json:"path"`
@@ -64,7 +70,28 @@ func extractDependencies(val interface{}) []string {
 	return deps
 }
 
-func (c *Config) SortEnvsByDependency() error {
+// SortEnvsByDependency orders c.Envs so that variables referenced via
+// ${} are defined before the variables that use them.
+//
+// caseInsensitive must reflect the target OS (see EnvKeysCaseInsensitive:
+// true on Windows, false elsewhere). When true, dependency matching and
+// de-duplication fold case ("Path" and "PATH" are the same variable);
+// when false, keys must match exactly, mirroring case-sensitive Unix
+// environments.
+func (c *Config) SortEnvsByDependency(caseInsensitive bool) error {
+	canon := func(key string) string {
+		if caseInsensitive {
+			return strings.ToUpper(key)
+		}
+		return key
+	}
+	equalKey := func(a, b string) bool {
+		if caseInsensitive {
+			return strings.EqualFold(a, b)
+		}
+		return a == b
+	}
+
 	resolved := make([]Environ, 0, len(c.Envs))
 	seen := make(map[string]bool)
 
@@ -73,12 +100,12 @@ func (c *Config) SortEnvsByDependency() error {
 		// 循環チェック: 現在の依存チェーンに自分が含まれていたら、
 		// 経路全体（例: A -> B -> A）を添えてエラーにする。
 		for _, link := range chain {
-			if strings.EqualFold(link, e.Key) {
+			if equalKey(link, e.Key) {
 				full := append(append([]string{}, chain...), e.Key)
 				return fmt.Errorf("circular reference detected: %s", strings.Join(full, " -> "))
 			}
 		}
-		if seen[strings.ToUpper(e.Key)] {
+		if seen[canon(e.Key)] {
 			return nil
 		}
 
@@ -89,7 +116,7 @@ func (c *Config) SortEnvsByDependency() error {
 		for _, depKey := range deps {
 			// 設定ファイル内の他の変数に依存しているか確認
 			for _, other := range c.Envs {
-				if strings.EqualFold(other.Key, depKey) {
+				if equalKey(other.Key, depKey) {
 					if err := resolve(other, chain); err != nil {
 						return err
 					}
@@ -97,13 +124,13 @@ func (c *Config) SortEnvsByDependency() error {
 			}
 		}
 
-		seen[strings.ToUpper(e.Key)] = true
+		seen[canon(e.Key)] = true
 		resolved = append(resolved, e)
 		return nil
 	}
 
 	for _, e := range c.Envs {
-		if !seen[strings.ToUpper(e.Key)] {
+		if !seen[canon(e.Key)] {
 			if err := resolve(e, nil); err != nil {
 				return err
 			}
@@ -124,9 +151,71 @@ func sortedKeys(m map[string]interface{}) []string {
 	return keys
 }
 
+// canonicalOSName maps an [envs.<name>] sub-table name to a canonical
+// GOOS name, resolving aliases ("win" -> "windows", "mac"/"macos" ->
+// "darwin"). ok=false means the name is not a reserved OS name.
+func canonicalOSName(name string) (string, bool) {
+	switch strings.ToLower(name) {
+	case "windows", "win":
+		return "windows", true
+	case "linux":
+		return "linux", true
+	case "darwin", "mac", "macos":
+		return "darwin", true
+	}
+	return "", false
+}
+
+// toStringEnvMap converts a nested env table (an OS bucket value) into
+// map[string]interface{}; ok=false when v is not a map at all.
+func toStringEnvMap(v interface{}) (map[string]interface{}, bool) {
+	switch m := v.(type) {
+	case map[string]interface{}:
+		return m, true
+	case map[interface{}]interface{}:
+		out := make(map[string]interface{}, len(m))
+		for k, val := range m {
+			ks, ok := k.(string)
+			if !ok {
+				return nil, false
+			}
+			out[ks] = val
+		}
+		return out, true
+	}
+	return nil, false
+}
+
 func (c *Config) NormalizeEnvs(rt interfaces.Runtime) error {
 	if c.RawEnvs == nil {
 		return nil
+	}
+
+	// OS 別セクション ([envs.windows] 等) の受け皿。
+	// 予約名 + map 値のエントリは変数ではなく OS バケットとして集め、
+	// 現在の OS のものだけを共通エントリの後ろに付け足す。これにより
+	// SortEnvsByDependency の前に混ざるので、共通 <-> OS 別の相互参照が
+	// ${} で解決できる。予約名でも map でない値は通常の変数のまま。
+	currentOS, _ := canonicalOSName(rt.Env().GOOS())
+	buckets := make(map[string]map[string]interface{})
+	addVarOrBucket := func(key string, val interface{}) {
+		if key == "" {
+			return
+		}
+		if osName, reserved := canonicalOSName(key); reserved {
+			if vars, isMap := toStringEnvMap(val); isMap {
+				bucket, ok := buckets[osName]
+				if !ok {
+					bucket = make(map[string]interface{})
+					buckets[osName] = bucket
+				}
+				for _, k := range sortedKeys(vars) {
+					bucket[k] = vars[k]
+				}
+				return
+			}
+		}
+		c.Envs = append(c.Envs, Environ{Key: key, Value: val})
 	}
 
 	switch data := c.RawEnvs.(type) {
@@ -142,8 +231,7 @@ func (c *Config) NormalizeEnvs(rt interfaces.Runtime) error {
 
 			// A. 従来形式のチェック: - key: "NAME", value: "VAL"
 			if key, ok := m["key"].(string); ok && key != "" {
-				val := m["value"]
-				c.Envs = append(c.Envs, Environ{Key: key, Value: val})
+				addVarOrBucket(key, m["value"])
 				continue
 			}
 
@@ -152,9 +240,7 @@ func (c *Config) NormalizeEnvs(rt interfaces.Runtime) error {
 			// 回して最初の1つで break し、残りをランダムに落としていた）。
 			// 順序を決定的にするためキーをソートしてから追加する。
 			for _, k := range sortedKeys(m) {
-				if k != "" {
-					c.Envs = append(c.Envs, Environ{Key: k, Value: m[k]})
-				}
+				addVarOrBucket(k, m[k])
 			}
 		}
 
@@ -163,7 +249,7 @@ func (c *Config) NormalizeEnvs(rt interfaces.Runtime) error {
 		// map のイテレーション順はランダムなため、キーをソートして
 		// 決定的な順序にする（依存関係の最終順序は SortEnvsByDependency が決める）。
 		for _, k := range sortedKeys(data) {
-			c.Envs = append(c.Envs, Environ{Key: k, Value: data[k]})
+			addVarOrBucket(k, data[k])
 		}
 
 	case map[interface{}]interface{}:
@@ -175,11 +261,19 @@ func (c *Config) NormalizeEnvs(rt interfaces.Runtime) error {
 			}
 		}
 		for _, k := range sortedKeys(strMap) {
-			c.Envs = append(c.Envs, Environ{Key: k, Value: strMap[k]})
+			addVarOrBucket(k, strMap[k])
 		}
 	default:
 		// 想定外の型（文字列や数値などが直接 envs に指定された場合）
 		return fmt.Errorf("unsupported type for envs: %T (must be map or list)", c.RawEnvs)
+	}
+
+	// 現在の OS のバケットを共通エントリの後ろに追加する
+	// (後勝ちの通常処理で共通値を上書きできる)。
+	if vars, ok := buckets[currentOS]; ok {
+		for _, k := range sortedKeys(vars) {
+			c.Envs = append(c.Envs, Environ{Key: k, Value: vars[k]})
+		}
 	}
 	return nil
 }
@@ -222,6 +316,14 @@ func mapToMetaConfig(m map[string]interface{}) MetaConfig {
 	}
 	if d, ok := m["description"].(string); ok {
 		mc.Description = d
+	}
+	if b, ok := m["expand_vars"].(bool); ok {
+		v := b
+		mc.ExpandVars = &v
+	}
+	if b, ok := m["exec_commands"].(bool); ok {
+		v := b
+		mc.ExecCommands = &v
 	}
 	return mc
 }
@@ -304,7 +406,7 @@ PARSED:
 		return Config{}, fmt.Errorf("normalize error: %w", err)
 	}
 
-	if err := cfg.SortEnvsByDependency(); err != nil {
+	if err := cfg.SortEnvsByDependency(EnvKeysCaseInsensitive(rt.Env().GOOS())); err != nil {
 		return Config{}, fmt.Errorf("dependency sort error: %w", err)
 	}
 
@@ -327,7 +429,7 @@ func ReadJson(rt interfaces.Runtime, fileName string) (Config, error) {
 		if err := config.NormalizeEnvs(rt); err != nil {
 			return Config{}, err
 		}
-		if err := config.SortEnvsByDependency(); err != nil {
+		if err := config.SortEnvsByDependency(EnvKeysCaseInsensitive(rt.Env().GOOS())); err != nil {
 			return Config{}, err
 		}
 	}
@@ -350,7 +452,7 @@ func ReadYaml(rt interfaces.Runtime, fileName string) (Config, error) {
 		if err := config.NormalizeEnvs(rt); err != nil {
 			return Config{}, err
 		}
-		if err := config.SortEnvsByDependency(); err != nil {
+		if err := config.SortEnvsByDependency(EnvKeysCaseInsensitive(rt.Env().GOOS())); err != nil {
 			return Config{}, err
 		}
 	}
@@ -375,7 +477,7 @@ func ReadToml(rt interfaces.Runtime, fileName string) (Config, error) {
 		if err := config.NormalizeEnvs(rt); err != nil {
 			return Config{}, err
 		}
-		if err := config.SortEnvsByDependency(); err != nil {
+		if err := config.SortEnvsByDependency(EnvKeysCaseInsensitive(rt.Env().GOOS())); err != nil {
 			return Config{}, err
 		}
 	}
@@ -461,7 +563,11 @@ func ReadInlineYaml(rt interfaces.Runtime, yamlData string) (Config, error) {
 
 }
 
-func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator string) []string {
+// BuildEnvs resolves the config's envs on top of baseEnv. opts
+// controls ${} expansion and $() execution (see
+// general.ExpandOptions; use general.DefaultExpandOptions for the
+// historical behavior).
+func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator string, opts general.ExpandOptions) []string {
 
 	// Description 出力とセパレータ決定ロジック（中略）
 	for _, cfgs := range c.Configs {
@@ -485,15 +591,17 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 		}
 	}
 
+	goos := rt.Env().GOOS()
 	envMap := make(map[string][]string)
-	// baseEnv (既存の環境変数) を map に変換
+	// baseEnv (既存の環境変数) を map に変換。
+	// キーは OS のケース規則で正規化する (Windows: 大文字化、それ以外: 原形)。
 	for _, e := range baseEnv {
 		if strings.HasPrefix(e, "=") {
 			continue
 		}
 		parts := strings.SplitN(e, "=", 2)
 		if len(parts) == 2 {
-			key := strings.ToUpper(parts[0])
+			key := CanonicalEnvKey(goos, parts[0])
 			if key == "" {
 				continue
 			}
@@ -507,7 +615,7 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 			rt.Logger().Warn().Interface("env", env).Msg("envのキーが空です")
 			continue
 		}
-		keyUpper := strings.ToUpper(env.Key)
+		canonKey := CanonicalEnvKey(goos, env.Key)
 
 		// 1. まず「生の値 (raw)」をスライスとして取り出す
 		var rawStrings []string
@@ -526,7 +634,7 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 			continue
 		}
 		rt.Logger().Debug().
-			Str("key", keyUpper).
+			Str("key", canonKey).
 			Bool("isListType", isListType).
 			Interface("rawValues", rawStrings).
 			Msg("Processing environment variable")
@@ -534,7 +642,7 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 		var expandedValues []string
 		for _, raw := range rawStrings {
 			// この時点の envMap には直前のループの結果が入っている
-			expanded := general.ExpandEnvAndCommands(rt, raw, envMap)
+			expanded := general.ExpandEnvAndCommandsWithOptions(rt, raw, envMap, opts)
 			expandedValues = append(expandedValues, expanded)
 		}
 
@@ -544,7 +652,7 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 		if isListType {
 
 			// a) 既存の値を登録
-			for _, v := range envMap[keyUpper] {
+			for _, v := range envMap[canonKey] {
 				for _, part := range strings.Split(v, separator) {
 					part = strings.TrimSpace(part)
 					if part != "" {
@@ -573,7 +681,7 @@ func (c *Config) BuildEnvs(rt interfaces.Runtime, baseEnv []string, separator st
 		}
 
 		// 4. 重要：envMap を即座に更新 (これで次のループの展開で参照可能になる)
-		envMap[keyUpper] = merged
+		envMap[canonKey] = merged
 	}
 
 	// map を []string に変換して返す
