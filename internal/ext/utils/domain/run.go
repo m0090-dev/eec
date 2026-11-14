@@ -60,16 +60,53 @@ func readOrFallbackInternal(opts types.RunOptions, rt interfaces.Runtime, name s
 	if err != nil {
 		return cfg, err
 	}
-	for _, f := range tagData.ImportConfigFiles {
+
+	// Compose the tag's sources in the same order ResolveRunOptions
+	// uses for a top-level tag: the tag's own config file first, then
+	// its imports. A config file that is also listed as an import is
+	// only composed once.
+	sources := make([]string, 0, len(tagData.ImportConfigFiles)+1)
+	if tagData.ConfigFile != "" {
+		sources = append(sources, tagData.ConfigFile)
+	}
+	for _, imp := range tagData.ImportConfigFiles {
+		if tagData.ConfigFile != "" && samePath(tagData.ConfigFile, imp) {
+			continue
+		}
+		sources = append(sources, imp)
+	}
+
+	for _, f := range sources {
 		// ★ここが重要：同じ visited map を渡して再帰する
 		fcfg, err := readOrFallbackInternal(opts, rt, f, visited)
 		if err != nil {
 			// 循環参照エラーなら即座に復帰（logger.Warnで流さず、上位にエラーを伝播させる）
 			return cfg, err
 		}
-		// env = fcfg.BuildEnvs(rt, env, opts.Separator)
+		// Flatten EVERYTHING a config contributes, not just its
+		// envs. Merging only Envs silently dropped the inner tag's
+		// [capture] commands (a vcvars capture in an inner tag never
+		// ran when the tag was composed into an aggregate tag), its
+		// [configs] toggles, and its [program].
 		cfg.Envs = append(cfg.Envs, fcfg.Envs...)
+		cfg.Configs = append(cfg.Configs, fcfg.Configs...)
+		cfg.CaptureCommands = append(cfg.CaptureCommands, fcfg.CaptureCommands...)
+		if cfg.Program.Path == "" && fcfg.Program.Path != "" {
+			cfg.Program = fcfg.Program
+		}
 	}
 	cfg.SourcePath = name
 	return cfg, nil
+}
+
+// samePath reports whether two config source references point at the
+// same file, comparing absolute forms so differently-spelled
+// references to one file still match.
+func samePath(a, b string) bool {
+	if a == b {
+		return true
+	}
+	absA, errA := filepath.Abs(a)
+	absB, errB := filepath.Abs(b)
+	return errA == nil && errB == nil && absA == absB
 }
