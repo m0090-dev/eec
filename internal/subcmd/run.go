@@ -10,6 +10,7 @@ import (
 	"github.com/m0090-dev/eec/internal/ext/types"
 	"github.com/spf13/cobra"
 	"os"
+	"os/signal"
 	"time"
 )
 
@@ -33,6 +34,7 @@ var duplicateStrictRunFlag bool
 var duplicateNoWarnRunFlag bool
 var noExpandRunFlag bool
 var noExecRunFlag bool
+var watchRunFlag bool
 
 func run() {
 	e := core.NewEngine(nil)
@@ -55,7 +57,18 @@ func run() {
 		NoExpand:         noExpandRunFlag,
 		NoExec:           noExecRunFlag,
 	}
-	if err := e.Run(context.Background(), opts); err != nil {
+	var runErr error
+	if watchRunFlag {
+		// Watch mode supervises the child until it exits on its own;
+		// Ctrl+C cancels the context, which stops the child and
+		// exits 130.
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+		defer stop()
+		runErr = e.RunWatch(ctx, opts)
+	} else {
+		runErr = e.Run(context.Background(), opts)
+	}
+	if err := runErr; err != nil {
 		// If the child process exited with a non-zero code, exit with
 		// that same code instead of collapsing it to 1 via Fatal.
 		var exitErr *types.ProcessExitError
@@ -80,7 +93,8 @@ Examples:
   eec run -c test.toml -p bash
   eec run -t dev -p powershell --program-args="-NoExit","-Command","Write-Output 'hello world'"
   eec run -c test.toml -p bash --verbose
-  eec run -c test.toml -p bash --duplicate-strict`,
+  eec run -c test.toml -p bash --duplicate-strict
+  eec run -c test.toml -p myserver --watch   (restart on config change)`,
 	Run: func(cmd *cobra.Command, args []string) {
 		run()
 	},
@@ -110,6 +124,12 @@ func init() {
 	// 展開・コマンド置換の無効化 (config の expand_vars / exec_commands より優先)
 	runCmd.Flags().BoolVar(&noExpandRunFlag, "no-expand", false, "Disable ${} variable expansion")
 	runCmd.Flags().BoolVar(&noExecRunFlag, "no-exec", false, "Disable $() command substitution (left literal)")
+
+	// 監視モード: 設定ファイルの変更で子プロセスを再解決・再起動する
+	runCmd.Flags().BoolVar(&watchRunFlag, "watch", false, "Restart the program whenever a config file changes (file-based configs only)")
+
+	_ = runCmd.RegisterFlagCompletionFunc("tag", completeTagNames)
+	_ = runCmd.RegisterFlagCompletionFunc("config-file", completeConfigFile)
 
 	rootCmd.AddCommand(runCmd)
 }

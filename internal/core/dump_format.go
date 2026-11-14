@@ -13,11 +13,16 @@ import (
 //     spaces, semicolons, $ or backticks survive being sourced.
 //   - "win": set "KEY=value" — the quoted form keeps cmd.exe from
 //     splitting or interpreting spaces and separators in the value.
+//   - "pwsh" / "powershell": $env:KEY = 'value' — the value is
+//     single-quoted for PowerShell, with embedded single quotes
+//     escaped by doubling them. Newlines stay literal inside the
+//     quotes, which PowerShell permits in single-quoted strings.
 //   - anything else (including ""): the raw KEY=VALUE pair, unchanged.
 //
-// The second return value is false only for the "win" form when the
-// pair has no '=' and therefore cannot be emitted as a set statement
-// (the previous behavior silently skipped such lines).
+// The second return value is false only for the "win" and "pwsh"
+// forms when the pair has no '=' and therefore cannot be emitted as
+// an assignment statement (the previous behavior silently skipped
+// such lines).
 func FormatDumpLine(kv, shell string) (string, bool) {
 	switch shell {
 	case "unix":
@@ -27,6 +32,13 @@ func FormatDumpLine(kv, shell string) (string, bool) {
 		}
 		escaped := strings.ReplaceAll(value, "'", `'\''`)
 		return fmt.Sprintf("export %s='%s'", key, escaped), true
+	case "pwsh", "powershell":
+		key, value, ok := strings.Cut(kv, "=")
+		if !ok {
+			return "", false
+		}
+		escaped := strings.ReplaceAll(value, "'", "''")
+		return fmt.Sprintf("$env:%s = '%s'", key, escaped), true
 	case "win":
 		key, value, ok := strings.Cut(kv, "=")
 		if !ok {

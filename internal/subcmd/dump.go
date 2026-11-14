@@ -47,13 +47,15 @@ after full expansion (variable substitution, command execution, etc.).
 
 Output formats (--shell flag):
   default  KEY=VALUE  (compatible with .env)
-  unix     export KEY=VALUE
-  win      set KEY=VALUE
+  unix     export KEY='VALUE'
+  win      set "KEY=VALUE"
+  pwsh     $env:KEY = 'VALUE'  (PowerShell; "powershell" is an alias)
 
 Examples:
   eec dump -c test.toml
   eec dump -t dev --shell unix
-  eec dump -t dev --shell win`,
+  eec dump -t dev --shell win
+  eec dump -t dev --shell pwsh`,
 	Run: func(cmd *cobra.Command, args []string) {
 		dump()
 	},
@@ -68,9 +70,12 @@ func init() {
 	dumpCmd.Flags().StringVarP(&tagDumpFlag, "tag", "t", "", "Tag name")
 	dumpCmd.Flags().StringSliceVarP(&importsDumpFlag, "import", "i", []string{}, "Import config files")
 	dumpCmd.Flags().StringVarP(&separatorDumpFlag, "separator", "s", "", "Separator value")
-	dumpCmd.Flags().StringVar(&shellDumpFlag, "shell", "", "Output format: unix (export KEY=VALUE) or win (set KEY=VALUE)")
+	dumpCmd.Flags().StringVar(&shellDumpFlag, "shell", "", "Output format: unix (export KEY='VALUE'), win (set \"KEY=VALUE\") or pwsh ($env:KEY = 'VALUE')")
 	dumpCmd.Flags().BoolVar(&noExpandDumpFlag, "no-expand", false, "Disable ${} variable expansion")
 	dumpCmd.Flags().BoolVar(&noExecDumpFlag, "no-exec", false, "Disable $() command substitution (left literal)")
+
+	_ = dumpCmd.RegisterFlagCompletionFunc("tag", completeTagNames)
+	_ = dumpCmd.RegisterFlagCompletionFunc("config-file", completeConfigFile)
 
 	rootCmd.AddCommand(dumpCmd)
 }
