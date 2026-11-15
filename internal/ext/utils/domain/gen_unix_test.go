@@ -8,7 +8,7 @@ import (
 )
 
 func TestGenUnixTagUtilsScript_NotEmptyAndContainsTag(t *testing.T) {
-	script := domain.GenUnixTagUtilsScript("dev")
+	script := domain.GenUnixTagUtilsScript("dev", "")
 	if script == "" {
 		t.Fatal("GenUnixTagUtilsScript returned an empty script")
 	}
@@ -23,7 +23,7 @@ func TestGenUnixTagUtilsScript_NotEmptyAndContainsTag(t *testing.T) {
 }
 
 func TestGenUnixTagUtilsScriptProgramFixed_NotEmptyAndContainsTag(t *testing.T) {
-	script := domain.GenUnixTagUtilsScriptProgramFixed("dev")
+	script := domain.GenUnixTagUtilsScriptProgramFixed("dev", "")
 	if script == "" {
 		t.Fatal("GenUnixTagUtilsScriptProgramFixed returned an empty script")
 	}

@@ -49,6 +49,29 @@ func ResolveDataDir(rt interfaces.Runtime) string {
 	return filepath.Join(homeDir, DEFAULT_TAG_DIR)
 }
 
+// PortableDataDir returns the data directory when it was resolved
+// from a portable source — the EEC_HOME environment variable or an
+// ".eec" directory next to the executable — as an absolute path. It
+// returns "" when resolution fell back to the default ~/.eec, in
+// which case there is nothing portable to record. Generated launcher
+// scripts embed this value so they keep using the same tag store
+// when launched from a shell where EEC_HOME is not set.
+func PortableDataDir(rt interfaces.Runtime) string {
+	if v, ok := rt.Env().LookupEnv("EEC_HOME"); ok && v != "" {
+		if abs, err := filepath.Abs(v); err == nil {
+			return abs
+		}
+		return v
+	}
+	if exeDir, err := ExecutableDirFunc(); err == nil && exeDir != "" {
+		candidate := filepath.Join(exeDir, DEFAULT_TAG_DIR)
+		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+			return candidate
+		}
+	}
+	return ""
+}
+
 // RelativizeDataDirPath expresses p relative to the resolved data
 // directory when p lies inside it, so stored paths survive the data
 // directory moving (e.g. a portable drive changing drive letters).
