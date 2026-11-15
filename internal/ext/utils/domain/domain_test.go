@@ -362,7 +362,7 @@ func TestReadOrFallback_MatchesRecursive(t *testing.T) {
 // =============================================================
 
 func TestGenWindowsTagUtilsScript_ContainsTagName(t *testing.T) {
-	script := domain.GenWindowsTagUtilsScript("dev")
+	script := domain.GenWindowsTagUtilsScript("dev", "")
 	if !strings.Contains(script, "dev") {
 		t.Error("expected script to contain 'dev'")
 	}
@@ -372,7 +372,7 @@ func TestGenWindowsTagUtilsScript_ContainsTagName(t *testing.T) {
 }
 
 func TestGenWindowsTagUtilsScriptProgramFixed_ContainsTagName(t *testing.T) {
-	script := domain.GenWindowsTagUtilsScriptProgramFixed("myprog")
+	script := domain.GenWindowsTagUtilsScriptProgramFixed("myprog", "")
 	if !strings.Contains(script, "myprog") {
 		t.Error("expected script to contain 'myprog'")
 	}
@@ -382,8 +382,8 @@ func TestGenWindowsTagUtilsScriptProgramFixed_ContainsTagName(t *testing.T) {
 }
 
 func TestGenWindowsTagUtilsScript_DifferentTagsDiffer(t *testing.T) {
-	s1 := domain.GenWindowsTagUtilsScript("alpha")
-	s2 := domain.GenWindowsTagUtilsScript("beta")
+	s1 := domain.GenWindowsTagUtilsScript("alpha", "")
+	s2 := domain.GenWindowsTagUtilsScript("beta", "")
 	if s1 == s2 {
 		t.Error("scripts for different tag names should differ")
 	}
@@ -395,7 +395,7 @@ func TestGenUnixTagUtilsScript_NoPanic(t *testing.T) {
 			t.Errorf("GenUnixTagUtilsScript panicked: %v", r)
 		}
 	}()
-	_ = domain.GenUnixTagUtilsScript("sometag")
+	_ = domain.GenUnixTagUtilsScript("sometag", "")
 }
 
 // =============================================================

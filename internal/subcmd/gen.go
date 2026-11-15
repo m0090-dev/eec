@@ -48,8 +48,13 @@ var scriptCmd = &cobra.Command{
 	Long: `Generates utility scripts that make it easy to launch programs 
 in specific environments using registered tags.
 
-On Windows, it creates .bat files (e.g., tdev.bat).
+On Windows, it creates .cmd and .ps1 files (e.g., tdev.cmd, tdev.ps1).
 On Linux or macOS, it creates shell scripts (e.g., tdev).
+
+When the tag store comes from a portable location (EEC_HOME or an
+.eec directory next to the executable), the generated scripts embed
+that location so they resolve the same tags from any shell. Running
+a launcher without arguments opens the tag's shell (eec shell).
 
 For example, if a tag named 'dev' exists:
   tdev cmd     → runs 'cmd' within the 'dev' environment

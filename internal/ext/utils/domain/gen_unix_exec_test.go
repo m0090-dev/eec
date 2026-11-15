@@ -38,7 +38,7 @@ func runWithStubEec(t *testing.T, script string, args ...string) string {
 }
 
 func TestGenUnixTagUtilsScript_ExecutesLikeWindowsVariant(t *testing.T) {
-	got := runWithStubEec(t, domain.GenUnixTagUtilsScript("dev"), "prog", "a", "b", "c")
+	got := runWithStubEec(t, domain.GenUnixTagUtilsScript("dev", ""), "prog", "a", "b", "c")
 	want := "EEC ARGS: run --tag dev --program prog --program-args=a,b,c"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
@@ -46,7 +46,7 @@ func TestGenUnixTagUtilsScript_ExecutesLikeWindowsVariant(t *testing.T) {
 }
 
 func TestGenUnixTagUtilsScriptProgramFixed_ExecutesLikeWindowsVariant(t *testing.T) {
-	got := runWithStubEec(t, domain.GenUnixTagUtilsScriptProgramFixed("dev"), "x", "y")
+	got := runWithStubEec(t, domain.GenUnixTagUtilsScriptProgramFixed("dev", ""), "x", "y")
 	want := "EEC ARGS: run --tag dev --program-args=x,y"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
