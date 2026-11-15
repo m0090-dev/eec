@@ -10,6 +10,48 @@ import (
 	"testing"
 )
 
+// createNewConsole is CREATE_NEW_CONSOLE (0x10): a child started
+// with it gets its own console window instead of sharing the
+// parent's terminal.
+const createNewConsole = 0x00000010
+
+// TestCommand_VisibleChildInheritsConsole pins the fix for every
+// `eec shell` / `eec run` launch opening a separate black console
+// window: a non-hidden child must NOT get CREATE_NEW_CONSOLE, so it
+// inherits eec's console (e.g. the Windows Terminal tab).
+func TestCommand_VisibleChildInheritsConsole(t *testing.T) {
+	ex := DefaultExecutor{}
+	cmd, err := ex.Command("cmd.exe", nil, nil, nil, nil, nil, false)
+	if err != nil {
+		t.Fatalf("Command failed: %v", err)
+	}
+	if cmd.SysProcAttr != nil {
+		if cmd.SysProcAttr.CreationFlags&createNewConsole != 0 {
+			t.Errorf("visible child must not set CREATE_NEW_CONSOLE (flags=%#x)", cmd.SysProcAttr.CreationFlags)
+		}
+		if cmd.SysProcAttr.HideWindow {
+			t.Error("visible child must not set HideWindow")
+		}
+	}
+}
+
+// TestCommand_HiddenChildStaysHidden guards the other branch:
+// background children (capture, $() substitution) keep HideWindow
+// and never get a new console either.
+func TestCommand_HiddenChildStaysHidden(t *testing.T) {
+	ex := DefaultExecutor{}
+	cmd, err := ex.Command("cmd.exe", nil, nil, nil, nil, nil, true)
+	if err != nil {
+		t.Fatalf("Command failed: %v", err)
+	}
+	if cmd.SysProcAttr == nil || !cmd.SysProcAttr.HideWindow {
+		t.Errorf("hidden child must set HideWindow, got %+v", cmd.SysProcAttr)
+	}
+	if cmd.SysProcAttr != nil && cmd.SysProcAttr.CreationFlags&createNewConsole != 0 {
+		t.Errorf("hidden child must not set CREATE_NEW_CONSOLE (flags=%#x)", cmd.SysProcAttr.CreationFlags)
+	}
+}
+
 // TestCommand_BareNameResolvedAgainstEnvPath is the Windows side of
 // the 2.0.0 regression where `eec run -t dev nvim` failed with
 // "executable file not found in %PATH%": the tool exists only on the
