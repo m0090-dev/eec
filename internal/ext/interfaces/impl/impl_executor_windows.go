@@ -46,9 +46,13 @@ func (d DefaultExecutor) Command(path string, args []string, env []string, stdin
 	// Windows 専用フラグ
 	if hideWindow {
 		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	} else {
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: false, CreationFlags: 0x00000010}
 	}
+	// When the window is not hidden, SysProcAttr is left nil so the
+	// child inherits eec's console. Setting CREATE_NEW_CONSOLE here
+	// (as the code used to) forced every interactive child — the
+	// shell started by `eec shell`, programs started by `eec run` —
+	// into a separate, brand-new console window instead of the
+	// terminal the user launched eec from.
 
 	cmd.Env = env
 	if stdin != nil {
