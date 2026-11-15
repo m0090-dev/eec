@@ -3,6 +3,7 @@ package domain_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -92,9 +93,9 @@ func TestGenUnixTagUtilsScript_EmbedsEecHomeAndShellFallback(t *testing.T) {
 	}
 }
 
-// GenUtilsScript on a portable store writes the sh launcher with the
-// data directory baked in (host-OS variant; the Windows .cmd/.ps1
-// pair is covered by the generator tests above).
+// GenUtilsScript on a portable store writes the host-OS launcher
+// with the data directory baked in: tdev.sh on Unix, tdev.cmd (plus
+// the tdev.ps1 variant) on Windows.
 func TestGenUtilsScript_BakesPortableDataDir(t *testing.T) {
 	dataDir := filepath.Join(t.TempDir(), "eec-home")
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
@@ -111,12 +112,26 @@ func TestGenUtilsScript_BakesPortableDataDir(t *testing.T) {
 	outDir := filepath.Join(t.TempDir(), "scripts")
 	domain.GenUtilsScript(rt, outDir, false)
 
-	body, err := os.ReadFile(filepath.Join(outDir, "tdev.sh"))
+	launcher := "tdev.sh"
+	if runtime.GOOS == "windows" {
+		launcher = "tdev.cmd"
+	}
+	body, err := os.ReadFile(filepath.Join(outDir, launcher))
 	if err != nil {
 		t.Fatalf("generated script not found: %v", err)
 	}
 	if !strings.Contains(string(body), dataDir) {
 		t.Errorf("generated script should embed the data dir %q, got:\n%s", dataDir, body)
+	}
+
+	if runtime.GOOS == "windows" {
+		ps, err := os.ReadFile(filepath.Join(outDir, "tdev.ps1"))
+		if err != nil {
+			t.Fatalf("generated ps1 script not found: %v", err)
+		}
+		if !strings.Contains(string(ps), dataDir) {
+			t.Errorf("generated ps1 should embed the data dir %q, got:\n%s", dataDir, ps)
+		}
 	}
 }
 
